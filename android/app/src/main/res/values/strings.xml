@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pix Collage</string>
+    <string name="title_activity_main">Pix Collage</string>
+    <string name="package_name">com.jn0v.pixcollage</string>
+    <string name="custom_url_scheme">com.jn0v.pixcollage</string>
+</resources>
