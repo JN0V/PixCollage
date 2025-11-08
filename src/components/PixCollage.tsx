@@ -79,9 +79,22 @@ interface TempCropData {
 
 const PixCollage = () => {
   const { t, i18n } = useTranslation();
+  // Canvas presets
+  const canvasPresets = [
+    { id: 'default', name: 'Défaut', width: 800, height: 600 },
+    { id: 'square', name: 'Carré', width: 1080, height: 1080 },
+    { id: 'ig-post', name: 'Instagram Post', width: 1080, height: 1080 },
+    { id: 'ig-story', name: 'Instagram Story', width: 1080, height: 1920 },
+    { id: 'fb-post', name: 'Facebook Post', width: 1200, height: 630 },
+    { id: 'portrait', name: 'Portrait', width: 800, height: 1200 },
+    { id: 'landscape', name: 'Paysage', width: 1200, height: 800 },
+  ];
+
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+  const [canvasSize, setCanvasSize] = useState({ width: 1080, height: 1080 }); // Carré par défaut
+  const [selectedPreset, setSelectedPreset] = useState('square');
+  const [showCanvasSizeMenu, setShowCanvasSizeMenu] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [snapRotation, setSnapRotation] = useState(true);
   const [tempCropData, setTempCropData] = useState<TempCropData | null>(null);
@@ -95,6 +108,14 @@ const PixCollage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingTextValue, setEditingTextValue] = useState('');
+  
+  // Détection appareil mobile (tactile) et orientation
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
+  const [mobileToolbarCollapsed, setMobileToolbarCollapsed] = useState(false);
+  
+  // Zoom du canvas pour vue d'ensemble
+  const [canvasZoom, setCanvasZoom] = useState(1); // 1 = 100%, 0.5 = 50%, etc.
   
   // État temporaire pour affichage instantané des filtres
   const [tempFilters, setTempFilters] = useState<NonNullable<ImageElement['filters']> | null>(null);
@@ -145,34 +166,34 @@ const PixCollage = () => {
     }));
   }, [debouncedFilters, selectedId]);
 
-  // Initialize canvas size based on viewport on first load (mobile-friendly)
+  // Détection appareil mobile et orientation (SANS redimensionner canvas)
   useEffect(() => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const isMobile = w < 768;
-    if (!isMobile) return;
-    const padH = 40; // horizontal padding
-    const padV = 260; // header + bottom toolbar approx
-    let targetW = Math.min(1080, Math.max(320, w - padH));
-    let targetH: number;
-    if (h > w) {
-      // Portrait default ~ 4:5
-      const maxH = Math.max(240, h - padV);
-      targetH = Math.round(targetW * 5 / 4);
-      if (targetH > maxH) {
-        targetH = maxH;
-        targetW = Math.round(targetH * 4 / 5);
-      }
-    } else {
-      // Landscape default ~ 16:9
-      const maxH = Math.max(240, h - padV);
-      targetH = Math.round(targetW * 9 / 16);
-      if (targetH > maxH) {
-        targetH = maxH;
-        targetW = Math.round(targetH * 16 / 9);
-      }
-    }
-    setCanvasSize({ width: targetW, height: targetH });
+    const handleResize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      
+      // Détection appareil mobile: Capacitor natif OU écran tactile < 768px
+      const isMobile = Capacitor.isNativePlatform() || (w < 768 && 'ontouchstart' in window);
+      const landscape = w > h;
+      
+      setIsMobileDevice(isMobile);
+      setIsLandscape(landscape);
+      
+      // Canvas garde SA TAILLE FIXE choisie par l'utilisateur
+      // On ne redimensionne plus automatiquement !
+    };
+    
+    // Appel initial
+    handleResize();
+    
+    // Écouter changements d'orientation pour UI seulement
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
   const loadImage = (file: File): Promise<HTMLImageElement> => {
@@ -252,6 +273,41 @@ const PixCollage = () => {
   const handleClear = () => {
     setElements([]);
     setSelectedId(null);
+  };
+
+  const changeCanvasSize = (presetId: string) => {
+    const preset = canvasPresets.find(p => p.id === presetId);
+    if (preset) {
+      setCanvasSize({ width: preset.width, height: preset.height });
+      setSelectedPreset(presetId);
+      setShowCanvasSizeMenu(false);
+      setToast(`Canvas: ${preset.name} (${preset.width}×${preset.height})`);
+    }
+  };
+
+  const zoomIn = () => {
+    setCanvasZoom(prev => Math.min(prev + 0.1, 2)); // Max 200%
+  };
+
+  const zoomOut = () => {
+    setCanvasZoom(prev => Math.max(prev - 0.1, 0.2)); // Min 20%
+  };
+
+  const zoomReset = () => {
+    setCanvasZoom(1);
+  };
+
+  const zoomToFit = () => {
+    if (!scrollRef.current) return;
+    const container = scrollRef.current;
+    const containerWidth = container.clientWidth - 40; // Padding
+    const containerHeight = container.clientHeight - 80; // Padding + indicator
+    
+    const scaleX = containerWidth / canvasSize.width;
+    const scaleY = containerHeight / canvasSize.height;
+    const scale = Math.min(scaleX, scaleY, 1); // Ne pas zoomer plus que 100%
+    
+    setCanvasZoom(scale);
   };
 
   const addText = () => {
@@ -596,8 +652,9 @@ const PixCollage = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
-          {/* Sidebar */}
-          <div className="hidden md:block lg:col-span-1 space-y-3 sm:space-y-4">
+          {/* Sidebar desktop (hidden on mobile devices) */}
+          {!isMobileDevice && (
+            <div className="lg:col-span-1 space-y-3 sm:space-y-4">
             {/* Add Images */}
             <div className="bg-white/80 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-gray-100">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -974,9 +1031,10 @@ const PixCollage = () => {
               </ul>
             </div>
           </div>
+          )}
 
           {/* Canvas Area */}
-          <div className="lg:col-span-4">
+          <div className={`${isMobileDevice ? 'col-span-1' : 'lg:col-span-4'}`}>
             <div
               {...getRootProps()}
               className={`bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-6 transition-all duration-300 border-2 ${
@@ -1008,7 +1066,23 @@ const PixCollage = () => {
                     </p>
                   </div>
                 ) : (
-                  <div style={{ width: canvasSize.width, height: canvasSize.height }}>
+                  <div 
+                    style={{ 
+                      width: canvasSize.width, 
+                      height: canvasSize.height,
+                      border: '4px solid #4f46e5',
+                      boxShadow: '0 0 0 2px rgba(79, 70, 229, 0.1), 0 10px 40px rgba(0, 0, 0, 0.2)',
+                      borderRadius: '4px',
+                      position: 'relative',
+                      transform: `scale(${canvasZoom})`,
+                      transformOrigin: 'top left',
+                      margin: canvasZoom < 1 ? '20px' : '0'
+                    }}
+                  >
+                    {/* Canvas size indicator */}
+                    <div className="absolute -top-8 left-0 text-xs font-medium text-indigo-600 bg-white/90 px-2 py-1 rounded-md shadow-sm">
+                      {canvasSize.width} × {canvasSize.height} px • {Math.round(canvasZoom * 100)}%
+                    </div>
                     <Stage
                       width={canvasSize.width}
                       height={canvasSize.height}
@@ -1070,17 +1144,79 @@ const PixCollage = () => {
           </div>
         </div>
       </div>
-      {/* Mobile bottom toolbar */}
-      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-        {toast && (
-          <div className="mb-2 mx-auto w-fit px-3 py-1.5 rounded bg-black/80 text-white text-xs shadow">
-            {toast}
-          </div>
-        )}
-        <div className="mx-auto mb-3 max-w-xl px-3">
-          <div className="bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-lg rounded-2xl border border-gray-200 p-3">
-            {!isCropping ? (
-              <div className="grid grid-cols-3 gap-2">
+      
+      {/* Zoom controls */}
+      <div className="fixed bottom-20 left-4 z-40 flex flex-col gap-2">
+        <button
+          onClick={zoomIn}
+          className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+          title="Zoom +"
+        >
+          <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+          </svg>
+        </button>
+        <button
+          onClick={zoomOut}
+          className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+          title="Zoom -"
+        >
+          <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+          </svg>
+        </button>
+        <button
+          onClick={zoomReset}
+          className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+          title="100%"
+        >
+          <span className="text-xs font-bold text-gray-700">1:1</span>
+        </button>
+        <button
+          onClick={zoomToFit}
+          className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+          title="Adapter à l'écran"
+        >
+          <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </button>
+      </div>
+      
+      {/* Mobile toolbar (bottom en portrait, right sidebar en paysage) */}
+      {isMobileDevice && !mobileToolbarCollapsed && (
+        <div className={`fixed z-50 ${
+          isLandscape 
+            ? 'right-0 top-0 bottom-0 w-[300px] flex flex-col' 
+            : 'inset-x-0 bottom-0'
+        }`}>
+          {toast && (
+            <div className={`mx-auto w-fit px-3 py-1.5 rounded bg-black/80 text-white text-xs shadow ${
+              isLandscape ? 'mt-2' : 'mb-2'
+            }`}>
+              {toast}
+            </div>
+          )}
+          {/* Collapse button */}
+          <button
+            onClick={() => setMobileToolbarCollapsed(true)}
+            className={`absolute z-10 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 p-2 hover:bg-gray-50 transition-colors ${
+              isLandscape ? '-left-10 top-1/2 -translate-y-1/2' : 'right-4 -top-10'
+            }`}
+            title="Réduire la barre"
+          >
+            <svg className="h-4 w-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isLandscape ? "M9 5l7 7-7 7" : "M19 9l-7 7-7-7"} />
+            </svg>
+          </button>
+          <div className={`${
+            isLandscape 
+              ? 'flex-1 overflow-y-auto p-3' 
+              : 'mx-auto mb-3 max-w-xl px-3'
+          }`}>
+            <div className="bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-lg rounded-2xl border border-gray-200 p-3">
+              {!isCropping ? (
+                <div className={`grid ${isLandscape ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
                 {/* Ligne 1 */}
                 <button 
                   onClick={() => (open ? open() : fileInputRef.current?.click())} 
@@ -1190,12 +1326,33 @@ const PixCollage = () => {
                 </button>
               </div>
             )}
+            </div>
           </div>
         </div>
-      </div>
-      {/* Mobile filters bottom sheet */}
-      {showFilters && selectedId && !isCropping && (
-        <div className="fixed inset-x-0 bottom-16 z-50 md:hidden">
+      )}
+      
+      {/* Expand button when toolbar is collapsed */}
+      {isMobileDevice && mobileToolbarCollapsed && (
+        <button
+          onClick={() => setMobileToolbarCollapsed(false)}
+          className={`fixed z-50 bg-indigo-600 shadow-lg rounded-full border-2 border-white p-3 hover:bg-indigo-700 transition-colors ${
+            isLandscape ? 'right-4 top-1/2 -translate-y-1/2' : 'right-4 bottom-4'
+          }`}
+          title="Afficher la barre"
+        >
+          <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      )}
+      
+      {/* Mobile filters panel */}
+      {isMobileDevice && showFilters && selectedId && !isCropping && (
+        <div className={`fixed z-40 ${
+          isLandscape 
+            ? 'left-0 top-0 bottom-0 w-[280px]' 
+            : 'inset-x-0 bottom-16'
+        }`}>
           <div className="mx-auto max-w-xl px-3">
             <div className="bg-white/95 backdrop-blur border border-gray-200 shadow-xl rounded-2xl p-3">
               <div className="flex items-center justify-between mb-2">
@@ -1241,8 +1398,38 @@ const PixCollage = () => {
           </div>
         </div>
       )}
+      {/* Canvas size selector */}
+      <div className="fixed top-16 right-16 z-50">
+        <button
+          onClick={() => setShowCanvasSizeMenu(!showCanvasSizeMenu)}
+          className="px-3 py-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
+          title="Taille du canvas"
+        >
+          <svg className="h-4 w-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" />
+          </svg>
+          <span className="text-xs font-medium text-gray-700">{canvasSize.width}×{canvasSize.height}</span>
+        </button>
+        {showCanvasSizeMenu && (
+          <div className="absolute top-12 right-0 bg-white shadow-xl rounded-lg border border-gray-200 overflow-hidden min-w-[200px]">
+            {canvasPresets.map(preset => (
+              <button
+                key={preset.id}
+                onClick={() => changeCanvasSize(preset.id)}
+                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                  selectedPreset === preset.id ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700'
+                }`}
+              >
+                <span>{preset.name}</span>
+                <span className="text-xs text-gray-500">{preset.width}×{preset.height}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Language selector */}
-      <div className="fixed top-4 right-4 z-50">
+      <div className="fixed top-16 right-4 z-50">
         <button
           onClick={() => setShowLangMenu(!showLangMenu)}
           className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"

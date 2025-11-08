@@ -1,19 +1,19 @@
 # Nouvelles fonctionnalités à implémenter
 
-## 1. Optimisation Performance Filtres ⚡
+## 1. Gestes tactiles multi-touch 🎯
 
-**Problème**: L'application des filtres est très lente lors du déplacement des sliders
+**Besoin**: Améliorer l'expérience utilisateur sur mobile avec des gestes tactiles
 
-**Solution**:
-- Débounce des changements de filtres (150ms)
-- État temporaire pour affichage instantané de la valeur
-- Application réelle des filtres avec délai
-- Alternative: Appliquer seulement au relâchement du slider
+**Fonctionnalités**:
+- Pinch to zoom (écarter 2 doigts → agrandir)
+- Rotation à 2 doigts (pivoter image)
+- Déplacement à 2 doigts (glisser image)
+
+**Tests**:
+- Tests sur Pixel 9
 
 **Fichiers à modifier**:
-- `src/components/PixCollage.tsx`: Ajouter hook useDebounce et état temporaire
-
----
+- `src/components/PixCollage.tsx`: Ajouter gestion des gestes tactiles
 
 ## 2. Sélecteur de Taille Canvas 📐
 
