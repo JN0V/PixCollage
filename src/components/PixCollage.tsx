@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useDebounce } from '../hooks/useDebounce';
 import { Stage, Layer, Image as KonvaImage, Transformer, Rect, Text } from 'react-konva';
 import { useDropzone } from 'react-dropzone';
 import { useTranslation } from 'react-i18next';
@@ -94,6 +95,10 @@ const PixCollage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingTextValue, setEditingTextValue] = useState('');
+  
+  // État temporaire pour affichage instantané des filtres
+  const [tempFilters, setTempFilters] = useState<NonNullable<ImageElement['filters']> | null>(null);
+  const debouncedFilters = useDebounce(tempFilters, 150);
 
   const selectedElement = elements.find(el => el.id === selectedId);
   const selectedImage = selectedElement?.type === 'image' ? selectedElement : null;
@@ -108,6 +113,36 @@ const PixCollage = () => {
   useEffect(() => {
     if (!selectedId || isCropping) setShowFilters(false);
   }, [selectedId, isCropping]);
+
+  // Synchroniser tempFilters avec l'image sélectionnée
+  useEffect(() => {
+    if (selectedImage?.filters) {
+      setTempFilters(selectedImage.filters);
+    } else if (selectedImage) {
+      setTempFilters({
+        brightness: 100,
+        contrast: 100,
+        saturation: 100,
+        blur: 0,
+        grayscale: false,
+        sepia: false,
+      });
+    } else {
+      setTempFilters(null);
+    }
+  }, [selectedImage?.id]);
+
+  // Appliquer les filtres débounced (optimisation performance)
+  useEffect(() => {
+    if (!debouncedFilters || !selectedId) return;
+    
+    setElements(prev => prev.map(el => {
+      if (el.id === selectedId && el.type === 'image') {
+        return { ...el, filters: debouncedFilters };
+      }
+      return el;
+    }));
+  }, [debouncedFilters, selectedId]);
 
   // Initialize canvas size based on viewport on first load (mobile-friendly)
   useEffect(() => {
@@ -414,45 +449,25 @@ const PixCollage = () => {
     }));
   };
 
-  const updateFilter = useCallback((filterId: keyof NonNullable<ImageElement['filters']>, value: number | boolean) => {
-    if (!selectedId) return;
-    setElements(prev => prev.map(el => {
-      if (el.id === selectedId && el.type === 'image') {
-        return {
-          ...el,
-          filters: {
-            brightness: el.filters?.brightness ?? 100,
-            contrast: el.filters?.contrast ?? 100,
-            saturation: el.filters?.saturation ?? 100,
-            blur: el.filters?.blur ?? 0,
-            grayscale: el.filters?.grayscale ?? false,
-            sepia: el.filters?.sepia ?? false,
-            [filterId]: value
-          }
-        };
-      }
-      return el;
-    }));
-  }, [selectedId]);
+  // Mise à jour temporaire des filtres (affichage instantané, pas de re-render canvas)
+  const updateTempFilter = useCallback((filterId: keyof NonNullable<ImageElement['filters']>, value: number | boolean) => {
+    setTempFilters(prev => {
+      if (!prev) return null;
+      return { ...prev, [filterId]: value };
+    });
+  }, []);
 
   const resetFilters = () => {
     if (!selectedId) return;
-    setElements(elements.map(img => {
-      if (img.id === selectedId) {
-        return {
-          ...img,
-          filters: {
-            brightness: 100,
-            contrast: 100,
-            saturation: 100,
-            blur: 0,
-            grayscale: false,
-            sepia: false
-          }
-        };
-      }
-      return img;
-    }));
+    // Réinitialiser les filtres temporaires immédiatement
+    setTempFilters({
+      brightness: 100,
+      contrast: 100,
+      saturation: 100,
+      blur: 0,
+      grayscale: false,
+      sepia: false
+    });
   };
 
   const startCrop = () => {
@@ -791,14 +806,14 @@ const PixCollage = () => {
                   <div>
                     <label className="text-xs font-medium text-gray-600 flex justify-between">
                       <span>Luminosité</span>
-                      <span className="text-indigo-600">{selectedImage?.filters?.brightness ?? 100}%</span>
+                      <span className="text-indigo-600">{tempFilters?.brightness ?? 100}%</span>
                     </label>
                     <input
                       type="range"
                       min="0"
                       max="200"
-                      value={selectedImage?.filters?.brightness ?? 100}
-                      onChange={(e) => updateFilter('brightness', parseInt(e.target.value))}
+                      value={tempFilters?.brightness ?? 100}
+                      onChange={(e) => updateTempFilter('brightness', parseInt(e.target.value))}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
@@ -807,14 +822,14 @@ const PixCollage = () => {
                   <div>
                     <label className="text-xs font-medium text-gray-600 flex justify-between">
                       <span>Contraste</span>
-                      <span className="text-indigo-600">{selectedImage?.filters?.contrast ?? 100}%</span>
+                      <span className="text-indigo-600">{tempFilters?.contrast ?? 100}%</span>
                     </label>
                     <input
                       type="range"
                       min="0"
                       max="200"
-                      value={selectedImage?.filters?.contrast ?? 100}
-                      onChange={(e) => updateFilter('contrast', parseInt(e.target.value))}
+                      value={tempFilters?.contrast ?? 100}
+                      onChange={(e) => updateTempFilter('contrast', parseInt(e.target.value))}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
@@ -823,14 +838,14 @@ const PixCollage = () => {
                   <div>
                     <label className="text-xs font-medium text-gray-600 flex justify-between">
                       <span>Saturation</span>
-                      <span className="text-indigo-600">{selectedImage?.filters?.saturation ?? 100}%</span>
+                      <span className="text-indigo-600">{tempFilters?.saturation ?? 100}%</span>
                     </label>
                     <input
                       type="range"
                       min="0"
                       max="200"
-                      value={selectedImage?.filters?.saturation ?? 100}
-                      onChange={(e) => updateFilter('saturation', parseInt(e.target.value))}
+                      value={tempFilters?.saturation ?? 100}
+                      onChange={(e) => updateTempFilter('saturation', parseInt(e.target.value))}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
@@ -839,14 +854,14 @@ const PixCollage = () => {
                   <div>
                     <label className="text-xs font-medium text-gray-600 flex justify-between">
                       <span>Flou</span>
-                      <span className="text-indigo-600">{selectedImage?.filters?.blur ?? 0}px</span>
+                      <span className="text-indigo-600">{tempFilters?.blur ?? 0}px</span>
                     </label>
                     <input
                       type="range"
                       min="0"
                       max="20"
-                      value={selectedImage?.filters?.blur ?? 0}
-                      onChange={(e) => updateFilter('blur', parseInt(e.target.value))}
+                      value={tempFilters?.blur ?? 0}
+                      onChange={(e) => updateTempFilter('blur', parseInt(e.target.value))}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
@@ -854,9 +869,9 @@ const PixCollage = () => {
                   {/* Grayscale & Sepia */}
                   <div className="grid grid-cols-2 gap-2 pt-2">
                     <button
-                      onClick={() => updateFilter('grayscale', !selectedImage?.filters?.grayscale)}
+                      onClick={() => updateTempFilter('grayscale', !tempFilters?.grayscale)}
                       className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                        selectedImage?.filters?.grayscale
+                        tempFilters?.grayscale
                           ? 'bg-gray-700 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
@@ -864,9 +879,9 @@ const PixCollage = () => {
                       N&B
                     </button>
                     <button
-                      onClick={() => updateFilter('sepia', !selectedImage?.filters?.sepia)}
+                      onClick={() => updateTempFilter('sepia', !tempFilters?.sepia)}
                       className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                        selectedImage?.filters?.sepia
+                        tempFilters?.sepia
                           ? 'bg-amber-700 text-white'
                           : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                       }`}
@@ -1148,34 +1163,34 @@ const PixCollage = () => {
                 <div>
                   <label className="text-xs font-medium text-gray-600 flex justify-between">
                     <span>{t('sidebar.brightness')}</span>
-                    <span className="text-indigo-600">{selectedImage?.filters?.brightness ?? 100}%</span>
+                    <span className="text-indigo-600">{tempFilters?.brightness ?? 100}%</span>
                   </label>
-                  <input type="range" min="0" max="200" value={selectedImage?.filters?.brightness ?? 100} onChange={(e) => updateFilter('brightness', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                  <input type="range" min="0" max="200" value={tempFilters?.brightness ?? 100} onChange={(e) => updateTempFilter('brightness', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 flex justify-between">
                     <span>{t('sidebar.contrast')}</span>
-                    <span className="text-indigo-600">{selectedImage?.filters?.contrast ?? 100}%</span>
+                    <span className="text-indigo-600">{tempFilters?.contrast ?? 100}%</span>
                   </label>
-                  <input type="range" min="0" max="200" value={selectedImage?.filters?.contrast ?? 100} onChange={(e) => updateFilter('contrast', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                  <input type="range" min="0" max="200" value={tempFilters?.contrast ?? 100} onChange={(e) => updateTempFilter('contrast', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 flex justify-between">
                     <span>{t('sidebar.saturation')}</span>
-                    <span className="text-indigo-600">{selectedImage?.filters?.saturation ?? 100}%</span>
+                    <span className="text-indigo-600">{tempFilters?.saturation ?? 100}%</span>
                   </label>
-                  <input type="range" min="0" max="200" value={selectedImage?.filters?.saturation ?? 100} onChange={(e) => updateFilter('saturation', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                  <input type="range" min="0" max="200" value={tempFilters?.saturation ?? 100} onChange={(e) => updateTempFilter('saturation', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 flex justify-between">
                     <span>{t('sidebar.blur')}</span>
-                    <span className="text-indigo-600">{selectedImage?.filters?.blur ?? 0}px</span>
+                    <span className="text-indigo-600">{tempFilters?.blur ?? 0}px</span>
                   </label>
-                  <input type="range" min="0" max="20" value={selectedImage?.filters?.blur ?? 0} onChange={(e) => updateFilter('blur', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                  <input type="range" min="0" max="20" value={tempFilters?.blur ?? 0} onChange={(e) => updateTempFilter('blur', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button onClick={() => updateFilter('grayscale', !selectedImage?.filters?.grayscale)} className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${selectedImage?.filters?.grayscale ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t('sidebar.grayscale')}</button>
-                  <button onClick={() => updateFilter('sepia', !selectedImage?.filters?.sepia)} className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${selectedImage?.filters?.sepia ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-700'}`}>{t('sidebar.sepia')}</button>
+                  <button onClick={() => updateTempFilter('grayscale', !tempFilters?.grayscale)} className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tempFilters?.grayscale ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t('sidebar.grayscale')}</button>
+                  <button onClick={() => updateTempFilter('sepia', !tempFilters?.sepia)} className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tempFilters?.sepia ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-700'}`}>{t('sidebar.sepia')}</button>
                 </div>
                 <button onClick={resetFilters} className="w-full px-3 py-2 text-xs font-medium bg-red-100 text-red-700 rounded-lg">{t('sidebar.resetFilters')}</button>
               </div>
