@@ -98,7 +98,7 @@ const PixCollage = () => {
   
   // État temporaire pour affichage instantané des filtres
   const [tempFilters, setTempFilters] = useState<NonNullable<ImageElement['filters']> | null>(null);
-  const debouncedFilters = useDebounce(tempFilters, 150);
+  const debouncedFilters = useDebounce(tempFilters, 300); // Augmenté pour réduire les re-renders
 
   const selectedElement = elements.find(el => el.id === selectedId);
   const selectedImage = selectedElement?.type === 'image' ? selectedElement : null;
@@ -108,6 +108,7 @@ const PixCollage = () => {
     const t = setTimeout(() => setToast(null), 2200);
     return () => clearTimeout(t);
   }, [toast]);
+
 
   // Auto close filters when no selection or when cropping
   useEffect(() => {
@@ -1077,76 +1078,118 @@ const PixCollage = () => {
           </div>
         )}
         <div className="mx-auto mb-3 max-w-xl px-3">
-          <div className="bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-lg rounded-2xl border border-gray-200 p-2 space-y-2">
-            {/* First row: Add, Text, Emoji, Export */}
-            <div className="flex items-center justify-between gap-1">
-              <button onClick={() => (open ? open() : fileInputRef.current?.click())} className="px-2.5 py-1.5 text-[10px] font-medium rounded-full bg-indigo-600 text-white shadow-sm">
-                {t('mobile.add')}
-              </button>
-              <button onClick={addText} className="px-2 py-1.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700">
-                T
-              </button>
-              <button onClick={() => setShowEmojiPicker(true)} className="px-1.5 py-1.5 text-sm rounded-full bg-yellow-100">
-                😊
-              </button>
-              <button onClick={handleExport} disabled={elements.length === 0} className="px-2.5 py-1.5 text-[10px] font-medium rounded-full bg-emerald-600 text-white disabled:opacity-40">
-                {t('mobile.export')}
-              </button>
-            </div>
-            
-            {/* Second row: Actions based on mode */}
-            <div className="flex items-center justify-between gap-1">
-              {!isCropping ? (
-                <>
-                  {selectedElement?.type === 'text' ? (
-                    <button 
-                      onClick={() => handleTextDoubleClick(selectedElement.id, selectedElement.text)} 
-                      className="px-2.5 py-1.5 text-[10px] font-medium rounded-full bg-blue-600 text-white"
-                    >
-                      {t('mobile.edit')}
-                    </button>
-                  ) : (
-                    <button onClick={startCrop} disabled={!selectedImage} className="px-2.5 py-1.5 text-[10px] font-medium rounded-full bg-indigo-600 text-white disabled:opacity-40">
-                      {t('mobile.crop')}
-                    </button>
-                  )}
+          <div className="bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-lg rounded-2xl border border-gray-200 p-3">
+            {!isCropping ? (
+              <div className="grid grid-cols-3 gap-2">
+                {/* Ligne 1 */}
+                <button 
+                  onClick={() => (open ? open() : fileInputRef.current?.click())} 
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-indigo-600 text-white shadow-sm active:scale-95 transition-transform"
+                >
+                  <PhotoIcon className="h-5 w-5" />
+                  <span>{t('mobile.add')}</span>
+                </button>
+                
+                {selectedElement?.type === 'text' ? (
                   <button 
-                    onClick={() => setShowFilters((s) => !s)} 
-                    disabled={!selectedImage} 
-                    className="px-2.5 py-1.5 text-[10px] font-medium rounded-full bg-purple-600 text-white disabled:opacity-40"
+                    onClick={() => handleTextDoubleClick(selectedElement.id, selectedElement.text)} 
+                    className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-blue-600 text-white active:scale-95 transition-transform"
                   >
-                    {t('mobile.effects')}
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <span>{t('mobile.edit')}</span>
                   </button>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={sendBackward}
-                      disabled={!selectedId}
-                      className={`px-1.5 py-1.5 text-xs font-medium rounded-full transition-colors ${selectedId ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-400'} disabled:opacity-40`}
-                      title={t('mobile.backward')}
-                    >
-                      <ArrowDownIcon className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={bringForward}
-                      disabled={!selectedId}
-                      className={`px-1.5 py-1.5 text-xs font-medium rounded-full transition-colors ${selectedId ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-400'} disabled:opacity-40`}
-                      title={t('mobile.forward')}
-                    >
-                      <ArrowUpIcon className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button onClick={applyCrop} className="flex-1 px-2.5 py-1.5 text-[10px] font-medium rounded-full bg-green-600 text-white">
-                    {t('mobile.apply')}
+                ) : (
+                  <button 
+                    onClick={startCrop} 
+                    disabled={!selectedImage} 
+                    className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                  >
+                    <ScissorsIcon className="h-5 w-5" />
+                    <span>{t('mobile.crop')}</span>
                   </button>
-                  <button onClick={cancelCrop} className="flex-1 px-2.5 py-1.5 text-[10px] font-medium rounded-full bg-gray-600 text-white">
-                    {t('mobile.cancel')}
-                  </button>
-                </>
-              )}
-            </div>
+                )}
+                
+                <button 
+                  onClick={() => setShowFilters((s) => !s)} 
+                  disabled={!selectedImage} 
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-purple-600 text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                >
+                  <SparklesIcon className="h-5 w-5" />
+                  <span>{t('mobile.effects')}</span>
+                </button>
+                
+                {/* Ligne 2 */}
+                <button 
+                  onClick={addText} 
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-blue-100 text-blue-700 active:scale-95 transition-transform"
+                >
+                  <span className="text-lg font-bold">T</span>
+                  <span>Texte</span>
+                </button>
+                
+                <button 
+                  onClick={() => setShowEmojiPicker(true)} 
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-yellow-100 text-yellow-700 active:scale-95 transition-transform"
+                >
+                  <span className="text-xl">😊</span>
+                  <span>Emoji</span>
+                </button>
+                
+                <button 
+                  onClick={handleExport} 
+                  disabled={elements.length === 0} 
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-emerald-600 text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                >
+                  <ArrowDownTrayIcon className="h-5 w-5" />
+                  <span>{t('mobile.export')}</span>
+                </button>
+                
+                {/* Ligne 3 - Z-order et Delete */}
+                <button
+                  onClick={bringForward}
+                  disabled={!selectedId}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-indigo-50 text-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                >
+                  <ArrowUpIcon className="h-5 w-5" />
+                  <span>{t('mobile.forward')}</span>
+                </button>
+                
+                <button
+                  onClick={sendBackward}
+                  disabled={!selectedId}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-indigo-50 text-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                >
+                  <ArrowDownIcon className="h-5 w-5" />
+                  <span>{t('mobile.backward')}</span>
+                </button>
+                
+                <button
+                  onClick={handleDelete}
+                  disabled={!selectedId}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-red-50 text-red-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                >
+                  <TrashIcon className="h-5 w-5" />
+                  <span>Suppr.</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={applyCrop} 
+                  className="flex items-center justify-center gap-2 px-4 py-4 min-h-[56px] text-sm font-medium rounded-xl bg-green-600 text-white active:scale-95 transition-transform"
+                >
+                  <CheckIcon className="h-5 w-5" />
+                  {t('mobile.apply')}
+                </button>
+                <button 
+                  onClick={cancelCrop} 
+                  className="flex items-center justify-center gap-2 px-4 py-4 min-h-[56px] text-sm font-medium rounded-xl bg-gray-600 text-white active:scale-95 transition-transform"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                  {t('mobile.cancel')}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1359,6 +1402,11 @@ const ImageComponent = ({ imageData, isSelected, onSelect, onTransform, snapRota
 
     const { filters: imgFilters } = imageData;
 
+    // Si pas de filtres, ne rien toucher
+    if (!imgFilters) {
+      return;
+    }
+
     // Réinitialiser les filtres d'abord
     node.clearCache();
     node.filters([]);
@@ -1396,7 +1444,27 @@ const ImageComponent = ({ imageData, isSelected, onSelect, onTransform, snapRota
         node.blurRadius(imgFilters.blur || 0);
         node.saturation((imgFilters.saturation - 100) / 100);
         
-        // Masquer temporairement les textes/emojis pour éviter qu'ils soient "aplatis" dans le cache de l'image
+        // NE PAS cacher immédiatement - le cache sera appliqué après un délai
+        // Cela permet une manipulation fluide pendant l'ajustement des filtres
+      }
+    }
+
+    node.getLayer()?.batchDraw();
+    
+    // Cache différé: appliquer le cache seulement après 800ms sans changement
+    // Cela optimise le rendu final sans ralentir les ajustements
+    const cacheTimer = setTimeout(() => {
+      if (!node || !imgFilters) return;
+      
+      const filtersActive = 
+        imgFilters.brightness !== 100 || 
+        imgFilters.contrast !== 100 ||
+        imgFilters.saturation !== 100 ||
+        imgFilters.blur > 0 ||
+        imgFilters.grayscale ||
+        imgFilters.sepia;
+        
+      if (filtersActive) {
         const layer = node.getLayer();
         const stage = layer?.getStage();
         if (stage) {
@@ -1404,19 +1472,18 @@ const ImageComponent = ({ imageData, isSelected, onSelect, onTransform, snapRota
           const textNodesVisibility = textNodes.map(n => n.visible());
           textNodes.forEach(n => n.visible(false));
           
-          // Appliquer le cache sans les textes/emojis
           node.cache();
           
-          // Restaurer immédiatement la visibilité des textes/emojis
           textNodes.forEach((n, i) => n.visible(textNodesVisibility[i]));
         } else {
           node.cache();
         }
+        node.getLayer()?.batchDraw();
       }
-    }
-
-    node.getLayer()?.batchDraw();
-  }, [imageData, isCropping]);
+    }, 800);
+    
+    return () => clearTimeout(cacheTimer);
+  }, [imageData.filters, isCropping]); // Ne dépendre QUE des filtres, pas de toute l'imageData
 
   const snapToGrid = (rotation: number): number => {
     if (!snapRotation) return rotation;
@@ -1439,6 +1506,7 @@ const ImageComponent = ({ imageData, isSelected, onSelect, onTransform, snapRota
     <>
       <KonvaImage
         ref={imageRef}
+        id={`image-${imageData.id}`}
         name={`image-${imageData.id}`}
         image={imageData.image}
         x={imageData.x}
@@ -1453,6 +1521,10 @@ const ImageComponent = ({ imageData, isSelected, onSelect, onTransform, snapRota
         onClick={onSelect}
         onTap={onSelect}
         opacity={1}
+        onDragStart={() => {
+          // Ne JAMAIS clearCache - les filtres restent visibles
+          // Accepter une légère perte de performance au lieu de filtres qui disparaissent
+        }}
         onDragEnd={(e) => {
           if (!isCropping) {
             onTransform(imageData.id, {
@@ -1460,6 +1532,9 @@ const ImageComponent = ({ imageData, isSelected, onSelect, onTransform, snapRota
               y: e.target.y(),
             });
           }
+        }}
+        onTransformStart={() => {
+          // Ne JAMAIS clearCache - les filtres restent visibles
         }}
         onTransformEnd={() => {
           const node = imageRef.current;

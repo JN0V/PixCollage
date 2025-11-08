@@ -69,3 +69,62 @@ a:hover {
     color: #213547;
   }
 }
+
+/* Styles optimisés pour sliders mobile - Touch targets plus gros */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Track - la barre horizontale */
+input[type="range"]::-webkit-slider-runnable-track {
+  background: #e5e7eb;
+  height: 8px;
+  border-radius: 4px;
+}
+
+input[type="range"]::-moz-range-track {
+  background: #e5e7eb;
+  height: 8px;
+  border-radius: 4px;
+}
+
+/* Thumb - le bouton qu'on fait glisser (version mobile-friendly) */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #6366f1;
+  cursor: pointer;
+  margin-top: -10px; /* Centrer le thumb sur la track */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  transition: all 0.15s ease;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #6366f1;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  transition: all 0.15s ease;
+}
+
+/* Thumb actif (quand on appuie dessus) */
+input[type="range"]:active::-webkit-slider-thumb {
+  background: #4f46e5;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  transform: scale(1.1);
+}
+
+input[type="range"]:active::-moz-range-thumb {
+  background: #4f46e5;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  transform: scale(1.1);
+}
