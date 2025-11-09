@@ -12,8 +12,12 @@ import { EmojiElement as EmojiComponent } from './canvas/EmojiElement';
 import { DesktopSidebar } from './toolbar/DesktopSidebar';
 import { MobileToolbar } from './toolbar/MobileToolbar';
 import { MobileFiltersPanel } from './panels/MobileFiltersPanel';
+import { GridSelector } from './controls/GridSelector';
+import { GridOverlay } from './canvas/GridOverlay';
 import type { CanvasElement, ImageElement, TextElement, EmojiElement, TempCropData } from '../types/canvas';
 import { canvasPresets } from '../types/canvas';
+import { useGrid } from '../hooks/useGrid';
+import { useImageHandlers } from '../hooks/useImageHandlers';
 
 const PixCollage = () => {
   const { t, i18n } = useTranslation();
@@ -36,6 +40,7 @@ const PixCollage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingTextValue, setEditingTextValue] = useState('');
+  const [showGridSelector, setShowGridSelector] = useState(false);
   
   // Détection appareil mobile (tactile) et orientation
   const [isMobileDevice, setIsMobileDevice] = useState(false);
@@ -51,6 +56,19 @@ const PixCollage = () => {
 
   const selectedElement = elements.find(el => el.id === selectedId);
   const selectedImage = selectedElement?.type === 'image' ? selectedElement : null;
+
+  // Grid system integration
+  const grid = useGrid({ canvasSize, elements, setElements });
+  
+  // Image handlers
+  const { onDrop: onDropHandler } = useImageHandlers({
+    elements,
+    canvasSize,
+    setElements,
+    setSelectedId,
+    setToast,
+    scrollRef,
+  });
 
   useEffect(() => {
     if (!toast) return;
@@ -124,63 +142,10 @@ const PixCollage = () => {
     };
   }, []);
 
-  const loadImage = (file: File): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const img = new window.Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(img);
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-  };
-
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!acceptedFiles || acceptedFiles.length === 0) return;
-    const loaded = await Promise.all(acceptedFiles.map(f => loadImage(f)));
-    const baseZ = elements.length > 0 ? Math.max(...elements.map(img => img.zIndex)) : 0;
-    const created: ImageElement[] = loaded.map((img, i) => {
-      const scale = Math.min(
-        canvasSize.width / 3 / img.width,
-        canvasSize.height / 3 / img.height
-      );
-      const displayW = img.width * scale;
-      const displayH = img.height * scale;
-      const jitter = (i - (loaded.length - 1) / 2) * 16;
-      const maxX = Math.max(0, canvasSize.width - displayW);
-      const maxY = Math.max(0, canvasSize.height - displayH);
-      const cxRaw = (canvasSize.width - displayW) / 2 + jitter;
-      const cyRaw = (canvasSize.height - displayH) / 2 + jitter;
-      const cx = Math.min(Math.max(0, cxRaw), maxX);
-      const cy = Math.min(Math.max(0, cyRaw), maxY);
-      return {
-        type: 'image',
-        id: Math.random().toString(36).substr(2, 9),
-        image: img,
-        x: cx,
-        y: cy,
-        width: img.width,
-        height: img.height,
-        rotation: 0,
-        scaleX: scale,
-        scaleY: scale,
-        zIndex: baseZ + i + 1,
-      };
-    });
-    setElements(prev => [...prev, ...created]);
-    setSelectedId(created[created.length - 1]?.id ?? null);
-    setToast(t('toast.imageAdded', { count: created.length }));
+    await onDropHandler(acceptedFiles, t('toast.imageAdded', { count: acceptedFiles.length }));
     if (fileInputRef.current) fileInputRef.current.value = '';
-    requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const targetLeft = Math.max(0, (canvasSize.width - el.clientWidth) / 2);
-      const targetTop = Math.max(0, (canvasSize.height - el.clientHeight) / 2);
-      el.scrollTo({ left: targetLeft, top: targetTop, behavior: 'smooth' });
-    });
-  }, [canvasSize, elements.length]);
+  }, [onDropHandler, t]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
@@ -610,6 +575,9 @@ const PixCollage = () => {
               hasElements={elements.length > 0}
               onAddText={addText}
               onAddEmoji={() => setShowEmojiPicker(true)}
+              onShowGridSelector={() => setShowGridSelector(true)}
+              onToggleGridOverlay={() => grid.setShowGridOverlay(!grid.showGridOverlay)}
+              showGridOverlay={grid.showGridOverlay}
             />
           )}
 
@@ -708,6 +676,14 @@ const PixCollage = () => {
                           />
                         ))}
                       </Layer>
+                      
+                      {/* Grid overlay */}
+                      <GridOverlay
+                        zones={grid.gridZones}
+                        canvasWidth={canvasSize.width}
+                        canvasHeight={canvasSize.height}
+                        visible={grid.showGridOverlay}
+                      />
                     </Stage>
                   </div>
                 )}
@@ -930,6 +906,14 @@ const PixCollage = () => {
           </div>
         </div>
       )}
+      
+      {/* Grid selector modal */}
+      <GridSelector
+        selectedGridId={grid.selectedGridId}
+        onSelectGrid={grid.selectGrid}
+        show={showGridSelector}
+        onClose={() => setShowGridSelector(false)}
+      />
     </div>
   );
 };

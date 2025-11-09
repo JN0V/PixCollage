@@ -38,6 +38,7 @@
     "content": "Content",
     "fullCanvas": "Full canvas",
     "delete": "Delete",
+    "grid": "Grid",
     "clearAll": "Clear all",
     "exportPNG": "Export PNG",
     "shortcuts": "Shortcuts",
@@ -68,7 +69,18 @@
     "apply": "Apply",
     "cancel": "Cancel",
     "close": "Close",
-    "language": "Language"
+    "language": "Language",
+    "grid": "Grid",
+    "delete": "Delete"
+  },
+  "grid": {
+    "title": "Grid Layout",
+    "selectGrid": "Select Grid",
+    "showGrid": "Show Grid",
+    "hideGrid": "Hide Grid",
+    "autoFill": "Auto Fill",
+    "clearGrid": "Clear Grid",
+    "snapToGrid": "Snap to Grid"
   },
   "toast": {
     "imageAdded": "{{count}} image added",

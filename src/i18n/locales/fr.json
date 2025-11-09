@@ -38,6 +38,7 @@
     "content": "Contenu",
     "fullCanvas": "Canvas complet",
     "delete": "Supprimer",
+    "grid": "Grille",
     "clearAll": "Tout effacer",
     "exportPNG": "Exporter PNG",
     "shortcuts": "Raccourcis",
@@ -69,7 +70,17 @@
     "apply": "Appliquer",
     "cancel": "Annuler",
     "close": "Fermer",
-    "language": "Langue"
+    "language": "Langue",
+    "grid": "Grille"
+  },
+  "grid": {
+    "title": "Disposition en grille",
+    "selectGrid": "Sélectionner une grille",
+    "showGrid": "Afficher la grille",
+    "hideGrid": "Masquer la grille",
+    "autoFill": "Remplir auto",
+    "clearGrid": "Réinitialiser",
+    "snapToGrid": "Aimanter"
   },
   "toast": {
     "imageAdded": "{{count}} image ajoutée",

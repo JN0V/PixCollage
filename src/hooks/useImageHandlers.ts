@@ -20,7 +20,7 @@ interface UseImageHandlersProps {
   setElements: React.Dispatch<React.SetStateAction<CanvasElement[]>>;
   setSelectedId: React.Dispatch<React.SetStateAction<string | null>>;
   setToast: (message: string) => void;
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const useImageHandlers = ({

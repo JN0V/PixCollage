@@ -71,6 +71,11 @@ interface DesktopSidebarProps {
   // Text/Emoji
   onAddText: () => void;
   onAddEmoji: () => void;
+  
+  // Grid
+  onShowGridSelector: () => void;
+  onToggleGridOverlay: () => void;
+  showGridOverlay: boolean;
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -101,6 +106,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   hasElements,
   onAddText,
   onAddEmoji,
+  onShowGridSelector,
+  onToggleGridOverlay,
+  showGridOverlay,
 }) => {
   const { t } = useTranslation();
 
@@ -194,6 +202,29 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               {t('sidebar.square')}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Grid Layout */}
+      <div className="bg-white/80 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-gray-100">
+        <h3 className="font-semibold text-gray-800 mb-3">{t('sidebar.grid')}</h3>
+        <div className="space-y-2">
+          <button
+            onClick={onShowGridSelector}
+            className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium"
+          >
+            {t('grid.selectGrid')}
+          </button>
+          <button
+            onClick={onToggleGridOverlay}
+            className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              showGridOverlay 
+                ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {showGridOverlay ? t('grid.hideGrid') : t('grid.showGrid')}
+          </button>
         </div>
       </div>
 
