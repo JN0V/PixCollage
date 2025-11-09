@@ -2,6 +2,28 @@
 
 All notable changes to PixCollage will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+**Grid System for Collage Layouts** 🎨
+- 13 predefined grid templates for structured photo collages
+- Grid types: Free mode, 2/3 columns/rows, 2×2 grid, hero layouts, asymmetric, mosaic
+- Visual grid selector with live preview of each template
+- Grid overlay on canvas showing zones with dashed borders
+- Snap-to-grid functionality for automatic image placement
+- Auto-fill feature to quickly populate all grid zones
+- Zone-based image assignment system
+- Relative positioning (0-1) adapts to any canvas size
+- `useGrid` hook for grid state and zone management
+- `GridSelector` component with thumbnail previews
+- `GridOverlay` component for visual zone representation
+
+**Code Organization**
+- Extracted types to `src/types/canvas.ts` and `src/types/grid.ts`
+- Created `useImageHandlers` hook for image loading utilities
+- Integrated `MobileFiltersPanel` component
+
 ## [1.2.0] - 2025-11-09
 
 Major code refactoring and multi-touch gesture improvements.
