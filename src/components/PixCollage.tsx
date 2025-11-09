@@ -11,74 +11,12 @@ import { TextElement as TextComponent } from './canvas/TextElement';
 import { EmojiElement as EmojiComponent } from './canvas/EmojiElement';
 import { DesktopSidebar } from './toolbar/DesktopSidebar';
 import { MobileToolbar } from './toolbar/MobileToolbar';
-
-interface BaseElement {
-  id: string;
-  x: number;
-  y: number;
-  rotation: number;
-  scaleX: number;
-  scaleY: number;
-  zIndex: number;
-}
-
-interface ImageElement extends BaseElement {
-  type: 'image';
-  image: HTMLImageElement;
-  width: number;
-  height: number;
-  crop?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  filters?: {
-    brightness: number;
-    contrast: number;
-    saturation: number;
-    blur: number;
-    grayscale: boolean;
-    sepia: boolean;
-  };
-}
-
-interface TextElement extends BaseElement {
-  type: 'text';
-  text: string;
-  fontSize: number;
-  fontFamily: string;
-  fill: string;
-  width?: number;
-}
-
-interface EmojiElement extends BaseElement {
-  type: 'emoji';
-  emoji: string;
-  fontSize: number;
-}
-
-type CanvasElement = ImageElement | TextElement | EmojiElement;
-
-interface TempCropData {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { MobileFiltersPanel } from './panels/MobileFiltersPanel';
+import type { CanvasElement, ImageElement, TextElement, EmojiElement, TempCropData } from '../types/canvas';
+import { canvasPresets } from '../types/canvas';
 
 const PixCollage = () => {
   const { t, i18n } = useTranslation();
-  // Canvas presets
-  const canvasPresets = [
-    { id: 'default', name: 'Défaut', width: 800, height: 600 },
-    { id: 'square', name: 'Carré', width: 1080, height: 1080 },
-    { id: 'ig-post', name: 'Instagram Post', width: 1080, height: 1080 },
-    { id: 'ig-story', name: 'Instagram Story', width: 1080, height: 1920 },
-    { id: 'fb-post', name: 'Facebook Post', width: 1200, height: 630 },
-    { id: 'portrait', name: 'Portrait', width: 800, height: 1200 },
-    { id: 'landscape', name: 'Paysage', width: 1200, height: 800 },
-  ];
 
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -438,9 +376,9 @@ const PixCollage = () => {
     }, 100);
   };
 
-  const handleTransform = (id: string, newAttrs: Partial<BaseElement>) => {
+  const handleTransform = (id: string, newAttrs: Partial<CanvasElement>) => {
     setElements(elements.map(el => 
-      el.id === id ? { ...el, ...newAttrs } : el
+      el.id === id ? { ...el, ...newAttrs } as CanvasElement : el
     ));
   };
 
@@ -850,57 +788,14 @@ const PixCollage = () => {
       )}
       
       {/* Mobile filters panel */}
-      {isMobileDevice && showFilters && selectedId && !isCropping && (
-        <div className={`fixed z-40 ${
-          isLandscape 
-            ? 'left-0 top-0 bottom-0 w-[280px]' 
-            : 'inset-x-0 bottom-16'
-        }`}>
-          <div className="mx-auto max-w-xl px-3">
-            <div className="bg-white/95 backdrop-blur border border-gray-200 shadow-xl rounded-2xl p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-medium text-gray-800">{t('sidebar.filters')}</div>
-                <button className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded transition-colors text-gray-700 font-medium" onClick={() => setShowFilters(false)}>{t('mobile.close')}</button>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600 flex justify-between">
-                    <span>{t('sidebar.brightness')}</span>
-                    <span className="text-indigo-600">{tempFilters?.brightness ?? 100}%</span>
-                  </label>
-                  <input type="range" min="0" max="200" value={tempFilters?.brightness ?? 100} onChange={(e) => updateTempFilter('brightness', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 flex justify-between">
-                    <span>{t('sidebar.contrast')}</span>
-                    <span className="text-indigo-600">{tempFilters?.contrast ?? 100}%</span>
-                  </label>
-                  <input type="range" min="0" max="200" value={tempFilters?.contrast ?? 100} onChange={(e) => updateTempFilter('contrast', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 flex justify-between">
-                    <span>{t('sidebar.saturation')}</span>
-                    <span className="text-indigo-600">{tempFilters?.saturation ?? 100}%</span>
-                  </label>
-                  <input type="range" min="0" max="200" value={tempFilters?.saturation ?? 100} onChange={(e) => updateTempFilter('saturation', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 flex justify-between">
-                    <span>{t('sidebar.blur')}</span>
-                    <span className="text-indigo-600">{tempFilters?.blur ?? 0}px</span>
-                  </label>
-                  <input type="range" min="0" max="20" value={tempFilters?.blur ?? 0} onChange={(e) => updateTempFilter('blur', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button onClick={() => updateTempFilter('grayscale', !tempFilters?.grayscale)} className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tempFilters?.grayscale ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t('sidebar.grayscale')}</button>
-                  <button onClick={() => updateTempFilter('sepia', !tempFilters?.sepia)} className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tempFilters?.sepia ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-700'}`}>{t('sidebar.sepia')}</button>
-                </div>
-                <button onClick={resetFilters} className="w-full px-3 py-2 text-xs font-medium bg-red-100 text-red-700 rounded-lg">{t('sidebar.resetFilters')}</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <MobileFiltersPanel
+        show={isMobileDevice && showFilters && selectedId !== null && !isCropping}
+        isLandscape={isLandscape}
+        filters={tempFilters}
+        onFilterChange={updateTempFilter}
+        onReset={resetFilters}
+        onClose={() => setShowFilters(false)}
+      />
       {/* Canvas size selector */}
       <div className="fixed top-16 right-16 z-50">
         <button
