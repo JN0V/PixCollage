@@ -2,6 +2,50 @@
 
 All notable changes to PixCollage will be documented in this file.
 
+## [1.2.0] - 2025-11-09
+
+Major code refactoring and multi-touch gesture improvements.
+
+### Added
+
+**Centralized Logger**
+- Logger utility (`src/utils/logger.ts`) for consistent log formatting
+- All logs prefixed with `[PixCollage]` for easy filtering with `adb logcat`
+- Category-based logging (GESTURE, DRAG, IMAGE, CANVAS, FILTER, EXPORT, ERROR)
+- Enable/disable logging globally
+
+**Component Refactoring**
+- Created `MobileToolbar` component for mobile-specific UI
+- Created `DesktopSidebar` component for desktop-specific UI
+- Created `MobileFiltersPanel` component for mobile filter controls
+- Created `ZoomControls` component for zoom functionality
+- Created `LanguageSelector` component for language switching
+- Created `CanvasSizeSelector` component for canvas size presets
+- Created `useCanvasElements` hook for canvas state management
+- Reduced `PixCollage.tsx` from 1540 to ~1000 lines
+
+**Testing**
+- Unit tests for `useMultiTouchGestures` hook
+- Test coverage for multi-touch activation/deactivation
+- Edge case testing (null refs, disabled state)
+
+### Changed
+
+**Multi-Touch Gesture Handling (v3)**
+- Robust multi-touch state management with double protection
+- Reset multi-touch when `TouchStart` occurs with < 2 fingers during active multi-touch
+- Reset multi-touch when `TouchEnd` brings finger count below 2
+- Fixed drag conflicts after pinch/rotate gestures
+- Immediate drag availability after multi-touch ends
+- Detailed logging for gesture debugging (`wasActive` state)
+
+### Fixed
+
+- Multi-touch gesture conflict preventing drag after pinch/rotate
+- Drag not working after complex manipulation sequences (drag → pinch → agrandir)
+- Inconsistent state during finger fluctuations in multi-touch
+- Missing French translation for `mobile.delete` → "Supprimer"
+
 ## [1.1.0] - 2025-11-08
 
 Major UX improvements for mobile and desktop.

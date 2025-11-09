@@ -65,6 +65,7 @@
     "export": "Exporter",
     "forward": "Avancer",
     "backward": "Reculer",
+    "delete": "Supprimer",
     "apply": "Appliquer",
     "cancel": "Annuler",
     "close": "Fermer",
