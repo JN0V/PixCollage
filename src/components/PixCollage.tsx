@@ -9,15 +9,24 @@ import Konva from 'konva';
 import { ImageElement as ImageComponent } from './canvas/ImageElement';
 import { TextElement as TextComponent } from './canvas/TextElement';
 import { EmojiElement as EmojiComponent } from './canvas/EmojiElement';
-import { DesktopSidebar } from './toolbar/DesktopSidebar';
+import { StickerComponent } from './canvas/StickerElement';
 import { MobileToolbar } from './toolbar/MobileToolbar';
 import { MobileFiltersPanel } from './panels/MobileFiltersPanel';
 import { GridSelector } from './controls/GridSelector';
+import { GridLineSettings } from './controls/GridLineSettings';
 import { GridOverlay } from './canvas/GridOverlay';
-import type { CanvasElement, ImageElement, TextElement, EmojiElement, TempCropData } from '../types/canvas';
+import { GridModeLayer } from './canvas/GridModeLayer';
+import { NewCompositionModal } from './modals/NewCompositionModal';
+import { TextEditorModal } from './modals/TextEditorModal';
+import { ExportProgressModal } from './modals/ExportProgressModal';
+import { StickerPicker } from './modals/StickerPicker';
+import type { CanvasElement, ImageElement, TextElement, EmojiElement, StickerElement, TempCropData } from '../types/canvas';
 import { canvasPresets } from '../types/canvas';
 import { useGrid } from '../hooks/useGrid';
 import { useImageHandlers } from '../hooks/useImageHandlers';
+import { useElementActions } from '../hooks/useElementActions';
+import { useTextEmoji } from '../hooks/useTextEmoji';
+import { useStickers } from '../hooks/useStickers';
 
 const PixCollage = () => {
   const { t, i18n } = useTranslation();
@@ -28,9 +37,9 @@ const PixCollage = () => {
   const [selectedPreset, setSelectedPreset] = useState('square');
   const [showCanvasSizeMenu, setShowCanvasSizeMenu] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
-  const [snapRotation, setSnapRotation] = useState(true);
+  const [snapRotation] = useState(true); // Snap rotation always enabled
   const [tempCropData, setTempCropData] = useState<TempCropData | null>(null);
-  const [exportMode, setExportMode] = useState<'canvas' | 'content'>('content');
+  const exportMode = 'content'; // Always export content only (not full canvas)
   const stageRef = useRef<Konva.Stage>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -38,12 +47,15 @@ const PixCollage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [editingTextId, setEditingTextId] = useState<string | null>(null);
-  const [editingTextValue, setEditingTextValue] = useState('');
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [editingTextElement, setEditingTextElement] = useState<TextElement | null>(null);
   const [showGridSelector, setShowGridSelector] = useState(false);
+  const [showNewComposition, setShowNewComposition] = useState(true); // Show at startup
+  const [exportProgress, setExportProgress] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showLineSettings, setShowLineSettings] = useState(false);
   
-  // Détection appareil mobile (tactile) et orientation
-  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  // Orientation basée sur les dimensions de la fenêtre (plus de distinction desktop/mobile)
   const [isLandscape, setIsLandscape] = useState(false);
   const [mobileToolbarCollapsed, setMobileToolbarCollapsed] = useState(false);
   
@@ -69,6 +81,56 @@ const PixCollage = () => {
     setToast,
     scrollRef,
   });
+  
+  // Element actions (delete, z-order, crop)
+  const elementActions = useElementActions({
+    elements,
+    setElements,
+    selectedId,
+    setSelectedId,
+    setIsCropping,
+    tempCropData,
+    setTempCropData,
+  });
+  
+  // Temporary dummy states for useTextEmoji compatibility
+  const [_editingTextId, _setEditingTextId] = useState<string | null>(null);
+  const [_editingTextValue, _setEditingTextValue] = useState('');
+  
+  // Text and Emoji handlers
+  const textEmoji = useTextEmoji({
+    elements,
+    setElements,
+    setSelectedId,
+    setEditingTextId: _setEditingTextId,
+    setEditingTextValue: _setEditingTextValue,
+    canvasSize,
+  });
+  
+  // Sticker handlers
+  const stickers = useStickers({
+    elements,
+    setElements,
+    canvasSize,
+  });
+  
+  // Override handleTextDoubleClick to use new modal
+  const handleTextDoubleClick = (id: string) => {
+    const text = elements.find(el => el.id === id && el.type === 'text') as TextElement | undefined;
+    if (text) setEditingTextElement(text);
+  };
+
+  // Add text and open editor immediately
+  const addTextWithEditor = () => {
+    textEmoji.addText();
+    // Find the last text element (just added)
+    setTimeout(() => {
+      const lastText = elements.filter(el => el.type === 'text').pop() as TextElement | undefined;
+      if (lastText) {
+        setEditingTextElement(lastText);
+      }
+    }, 0);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -112,17 +174,14 @@ const PixCollage = () => {
     }));
   }, [debouncedFilters, selectedId]);
 
-  // Détection appareil mobile et orientation (SANS redimensionner canvas)
+  // Détection orientation basée sur dimensions fenêtre (plus de distinction desktop/mobile)
   useEffect(() => {
     const handleResize = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
       
-      // Détection appareil mobile: Capacitor natif OU écran tactile < 768px
-      const isMobile = Capacitor.isNativePlatform() || (w < 768 && 'ontouchstart' in window);
+      // Orientation: paysage si largeur > hauteur, portrait sinon
       const landscape = w > h;
-      
-      setIsMobileDevice(isMobile);
       setIsLandscape(landscape);
       
       // Canvas garde SA TAILLE FIXE choisie par l'utilisateur
@@ -156,27 +215,7 @@ const PixCollage = () => {
     noClick: true,
   });
 
-  const handleDelete = () => {
-    if (selectedId) {
-      setElements(elements.filter(img => img.id !== selectedId));
-      setSelectedId(null);
-    }
-  };
-
-  const handleClear = () => {
-    setElements([]);
-    setSelectedId(null);
-  };
-
-  const changeCanvasSize = (presetId: string) => {
-    const preset = canvasPresets.find(p => p.id === presetId);
-    if (preset) {
-      setCanvasSize({ width: preset.width, height: preset.height });
-      setSelectedPreset(presetId);
-      setShowCanvasSizeMenu(false);
-      setToast(`Canvas: ${preset.name} (${preset.width}×${preset.height})`);
-    }
-  };
+  // Using elementActions.handleDelete and elementActions.handleClear from hook
 
   const zoomIn = () => {
     setCanvasZoom(prev => Math.min(prev + 0.1, 2)); // Max 200%
@@ -189,8 +228,49 @@ const PixCollage = () => {
   const zoomReset = () => {
     setCanvasZoom(1);
   };
+  
+  // Two-finger pan gesture for scrolling the container
+  const lastTouchCenter = useRef<{ x: number; y: number } | null>(null);
+  
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        
+        // Two fingers - pan the scroll container
+        const centerX = (touch1.clientX + touch2.clientX) / 2;
+        const centerY = (touch1.clientY + touch2.clientY) / 2;
+        
+        if (lastTouchCenter.current) {
+          const dx = lastTouchCenter.current.x - centerX;
+          const dy = lastTouchCenter.current.y - centerY;
+          scrollContainer.scrollLeft += dx;
+          scrollContainer.scrollTop += dy;
+        }
+        
+        lastTouchCenter.current = { x: centerX, y: centerY };
+        e.preventDefault();
+      }
+    };
+    
+    const handleTouchEnd = () => {
+      lastTouchCenter.current = null;
+    };
+    
+    scrollContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+    scrollContainer.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      scrollContainer.removeEventListener('touchmove', handleTouchMove);
+      scrollContainer.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
 
-  const zoomToFit = () => {
+  const zoomToFit = useCallback(() => {
     if (!scrollRef.current) return;
     const container = scrollRef.current;
     const containerWidth = container.clientWidth - 40; // Padding
@@ -201,86 +281,49 @@ const PixCollage = () => {
     const scale = Math.min(scaleX, scaleY, 1); // Ne pas zoomer plus que 100%
     
     setCanvasZoom(scale);
-  };
+  }, [canvasSize]);
 
-  const addText = () => {
-    const baseZ = elements.length > 0 ? Math.max(...elements.map(el => el.zIndex)) : 0;
-    const newText: TextElement = {
-      type: 'text',
-      id: Math.random().toString(36).substr(2, 9),
-      text: t('canvas.newText') || 'New Text',
-      x: canvasSize.width / 2 - 50,
-      y: canvasSize.height / 2 - 20,
-      fontSize: 32,
-      fontFamily: 'Arial',
-      fill: '#000000',
-      rotation: 0,
-      scaleX: 1,
-      scaleY: 1,
-      zIndex: baseZ + 1,
-    };
-    setElements([...elements, newText]);
-    setSelectedId(newText.id);
-  };
-
-  const addEmoji = (emoji: string) => {
-    const baseZ = elements.length > 0 ? Math.max(...elements.map(el => el.zIndex)) : 0;
-    const newEmoji: EmojiElement = {
-      type: 'emoji',
-      id: Math.random().toString(36).substr(2, 9),
-      emoji,
-      x: canvasSize.width / 2 - 30,
-      y: canvasSize.height / 2 - 30,
-      fontSize: 64,
-      rotation: 0,
-      scaleX: 1,
-      scaleY: 1,
-      zIndex: baseZ + 1,
-    };
-    setElements([...elements, newEmoji]);
-    setSelectedId(newEmoji.id);
-  };
-
-  const updateTextContent = (id: string, newText: string) => {
-    setElements(elements.map(el => 
-      el.id === id && el.type === 'text' ? { ...el, text: newText } : el
-    ));
-  };
-
-  const handleTextDoubleClick = (id: string, currentText: string) => {
-    setEditingTextId(id);
-    setEditingTextValue(currentText);
-  };
-
-  const saveTextEdit = () => {
-    if (editingTextId && editingTextValue.trim()) {
-      updateTextContent(editingTextId, editingTextValue.trim());
+  // Auto-zoom to fit when entering grid mode or changing grid template
+  useEffect(() => {
+    if (grid.gridMode === 'grid' && grid.gridZones.length > 0) {
+      // Small delay to ensure layout is ready
+      setTimeout(() => {
+        zoomToFit();
+      }, 100);
     }
-    setEditingTextId(null);
-    setEditingTextValue('');
-  };
+  }, [grid.gridMode, grid.gridZones.length, zoomToFit]);
 
-  const cancelTextEdit = () => {
-    setEditingTextId(null);
-    setEditingTextValue('');
-  };
+  // Using textEmoji.addText, textEmoji.addEmoji, textEmoji.handleTextDoubleClick,
+  // textEmoji.saveTextEdit, textEmoji.cancelTextEdit from hook
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!stageRef.current) return;
+    
+    setIsExporting(true);
+    setExportProgress(5);
     
     // Désélectionner temporairement pour cacher les contrôles
     const previousSelection = selectedId;
     setSelectedId(null);
     
+    await new Promise(resolve => setTimeout(resolve, 100));
+    setExportProgress(15);
+    
+    await new Promise(resolve => setTimeout(resolve, 50));
+    setExportProgress(25);
+    
     // Attendre que les contrôles soient masqués
-    setTimeout(() => {
+    setTimeout(async () => {
       const stage = stageRef.current!;
       let exportOptions: { pixelRatio: number; mimeType: string; x?: number; y?: number; width?: number; height?: number } = {
         pixelRatio: 2,
         mimeType: 'image/png',
       };
 
-      if (exportMode === 'content') {
+      setExportProgress(35);
+      
+      // In grid mode, always export full canvas. In free mode with content export, crop to content.
+      if (exportMode === 'content' && grid.gridMode === 'free') {
         const imageNodes = stage.find('Image') as Konva.Image[];
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         imageNodes.forEach((node) => {
@@ -301,13 +344,31 @@ const PixCollage = () => {
             exportOptions = { ...exportOptions, x, y, width: w, height: h };
           }
         }
+      } else if (grid.gridMode === 'grid') {
+        // Grid mode: export full canvas with exact dimensions
+        exportOptions = {
+          ...exportOptions,
+          x: 0,
+          y: 0,
+          width: canvasSize.width,
+          height: canvasSize.height
+        };
       }
 
+      setExportProgress(45);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      setExportProgress(55);
+      
       const uri = stage.toDataURL(exportOptions);
+      
+      setExportProgress(75);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      setExportProgress(85);
 
       if (Capacitor.isNativePlatform()) {
         (async () => {
           try {
+            setExportProgress(90);
             const { Share } = await import('@capacitor/share');
             await Share.share({ title: 'Export PNG', url: uri });
             setToast(t('toast.exportReady'));
@@ -326,19 +387,31 @@ const PixCollage = () => {
             } catch {
               setToast(t('toast.exportUnavailable'));
             }
+          } finally {
+            setExportProgress(100);
+            setTimeout(() => {
+              setIsExporting(false);
+              setExportProgress(0);
+            }, 500);
           }
         })();
       } else {
+        setExportProgress(90);
         const link = document.createElement('a');
         link.download = `collage-${Date.now()}.png`;
         link.href = uri;
         link.click();
         setToast(t('toast.exportDownloaded'));
+        setExportProgress(100);
+        setTimeout(() => {
+          setIsExporting(false);
+          setExportProgress(0);
+        }, 500);
       }
       
       // Restaurer la sélection
       setSelectedId(previousSelection);
-    }, 100);
+    }, 200);
   };
 
   const handleTransform = (id: string, newAttrs: Partial<CanvasElement>) => {
@@ -347,57 +420,8 @@ const PixCollage = () => {
     ));
   };
 
-  const bringToFront = () => {
-    if (!selectedId) return;
-    const maxZIndex = Math.max(...elements.map(img => img.zIndex));
-    setElements(elements.map(img => 
-      img.id === selectedId ? { ...img, zIndex: maxZIndex + 1 } : img
-    ));
-  };
-
-  const sendToBack = () => {
-    if (!selectedId) return;
-    const minZIndex = Math.min(...elements.map(img => img.zIndex));
-    setElements(elements.map(img => 
-      img.id === selectedId ? { ...img, zIndex: minZIndex - 1 } : img
-    ));
-  };
-
-  const bringForward = () => {
-    if (!selectedId) return;
-    const currentImg = elements.find(img => img.id === selectedId);
-    if (!currentImg) return;
-    
-    const higherImages = elements.filter(img => img.zIndex > currentImg.zIndex);
-    if (higherImages.length === 0) return;
-    
-    const nextZIndex = Math.min(...higherImages.map(img => img.zIndex));
-    const imgToSwap = elements.find(img => img.zIndex === nextZIndex);
-    
-    setElements(elements.map(img => {
-      if (img.id === selectedId) return { ...img, zIndex: nextZIndex };
-      if (imgToSwap && img.id === imgToSwap.id) return { ...img, zIndex: currentImg.zIndex };
-      return img;
-    }));
-  };
-
-  const sendBackward = () => {
-    if (!selectedId) return;
-    const currentImg = elements.find(img => img.id === selectedId);
-    if (!currentImg) return;
-    
-    const lowerImages = elements.filter(img => img.zIndex < currentImg.zIndex);
-    if (lowerImages.length === 0) return;
-    
-    const prevZIndex = Math.max(...lowerImages.map(img => img.zIndex));
-    const imgToSwap = elements.find(img => img.zIndex === prevZIndex);
-    
-    setElements(elements.map(img => {
-      if (img.id === selectedId) return { ...img, zIndex: prevZIndex };
-      if (imgToSwap && img.id === imgToSwap.id) return { ...img, zIndex: currentImg.zIndex };
-      return img;
-    }));
-  };
+  // Using elementActions.bringToFront, elementActions.sendToBack,
+  // elementActions.bringForward, elementActions.sendBackward from hook
 
   // Mise à jour temporaire des filtres (affichage instantané, pas de re-render canvas)
   const updateTempFilter = useCallback((filterId: keyof NonNullable<ImageElement['filters']>, value: number | boolean) => {
@@ -420,118 +444,104 @@ const PixCollage = () => {
     });
   };
 
-  const startCrop = () => {
-    if (!selectedId) return;
-    const el = elements.find(i => i.id === selectedId);
-    if (!el || el.type !== 'image') return;
+  // Crop functions moved to elementActions hook
+
+  // Handle new composition choices
+  const handleStartFreeMode = useCallback(() => {
+    grid.setGridMode('free');
+    setShowNewComposition(false);
+  }, [grid]);
+
+  const handleStartGridMode = (gridId: string) => {
+    grid.setGridMode('grid');
+    grid.selectGrid(gridId);
     
-    const displayWidth = el.width * el.scaleX;
-    const displayHeight = el.height * el.scaleY;
-
-    // Caler le cadre sur le bounding box du node image RÉEL (comme le Transformer)
-    const stage = stageRef.current;
-    const node = stage ? (stage.findOne(`.image-${selectedId}`) as Konva.Image | null) : null;
-    const bbox = node ? node.getClientRect({ skipStroke: true, skipShadow: true }) : null;
-    const initialCropData = bbox
-      ? { x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height }
-      : { x: el.x, y: el.y, width: displayWidth, height: displayHeight };
-
-    setTempCropData(initialCropData);
-    setIsCropping(true);
+    // Auto-adapt canvas format based on orientation
+    if (isLandscape) {
+      // Landscape orientation - prefer 16:9 format
+      setCanvasSize({ width: 1920, height: 1080 });
+      setSelectedPreset('landscape');
+    } else {
+      // Portrait orientation - prefer 9:16 format  
+      setCanvasSize({ width: 1080, height: 1920 });
+      setSelectedPreset('ig-story');
+    }
+    setShowNewComposition(false);
+  };
+  
+  // New composition - reset everything
+  const handleNewComposition = () => {
+    elementActions.handleClear(); // Clear all elements
+    grid.clearGrid(); // Clear grid zones
+    grid.setGridMode('free'); // Reset to free mode
+    setCanvasZoom(1); // Reset zoom
+    setShowNewComposition(true); // Show composition modal
   };
 
-  const applyCrop = async () => {
-    if (!selectedId || !tempCropData) return;
-    
-    const img = elements.find(i => i.id === selectedId);
-    if (!img) return;
-    
-    const stage = stageRef.current;
-    if (!stage) return;
+  // Handle adding image to a specific grid zone
+  const handleAddToZone = useCallback((zoneId: string) => {
+    const zone = grid.gridZones.find(z => z.id === zoneId);
+    if (!zone) return;
 
-    const targetName = `image-${selectedId}`;
-    const imageNodes = stage.find('Image') as Konva.Image[];
-    const rectNodes = stage.find('Rect');
-    const trNodes = stage.find('Transformer');
+    // Calculate zone absolute dimensions
+    const zoneAbsX = zone.x * canvasSize.width;
+    const zoneAbsY = zone.y * canvasSize.height;
+    const zoneAbsWidth = zone.width * canvasSize.width;
+    const zoneAbsHeight = zone.height * canvasSize.height;
 
-    const visibilityBackup: Array<{ node: Konva.Node; visible: boolean }> = [];
+    // Open file picker
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      // Load image to get dimensions
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new window.Image();
+        const url = URL.createObjectURL(file);
+        image.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(image);
+        };
+        image.onerror = reject;
+        image.src = url;
+      });
 
-    imageNodes.forEach((node) => {
-      const keep = node.name() === targetName;
-      if (!keep) {
-        visibilityBackup.push({ node, visible: node.visible() });
-        node.visible(false);
-      }
-    });
-    rectNodes.forEach((node) => {
-      visibilityBackup.push({ node, visible: node.visible() });
-      node.visible(false);
-    });
-    trNodes.forEach((node) => {
-      visibilityBackup.push({ node, visible: node.visible() });
-      node.visible(false);
-    });
+      // Calculate scale to fill zone (cover mode)
+      const scaleX = zoneAbsWidth / img.width;
+      const scaleY = zoneAbsHeight / img.height;
+      const scale = Math.max(scaleX, scaleY); // Cover mode - image may overflow
 
-    // Capturer exactement la zone du rectangle affiché (axe aligné)
-    const stageW = stage.width();
-    const stageH = stage.height();
-    const capX = Math.max(0, Math.min(tempCropData.x, stageW));
-    const capY = Math.max(0, Math.min(tempCropData.y, stageH));
-    const capW = Math.max(1, Math.min(tempCropData.width, stageW - capX));
-    const capH = Math.max(1, Math.min(tempCropData.height, stageH - capY));
+      const baseZ = elements.length > 0 ? Math.max(...elements.map(el => el.zIndex)) : 0;
 
-    const uri = stage.toDataURL({
-      x: capX,
-      y: capY,
-      width: capW,
-      height: capH,
-      pixelRatio: 1,
-      mimeType: 'image/png',
-    });
+      const newImage: ImageElement = {
+        type: 'image',
+        id: Math.random().toString(36).substr(2, 9),
+        image: img,
+        x: zoneAbsX + (zoneAbsWidth - img.width * scale) / 2, // Center in zone
+        y: zoneAbsY + (zoneAbsHeight - img.height * scale) / 2,
+        width: img.width,
+        height: img.height,
+        rotation: 0,
+        scaleX: scale,
+        scaleY: scale,
+        zIndex: baseZ + 1,
+      };
 
-    visibilityBackup.forEach(({ node, visible }) => node.visible(visible));
-
-    const newImg = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const im = new Image();
-      im.onload = () => resolve(im);
-      im.onerror = () => reject(new Error('Failed to load cropped image'));
-      im.src = uri;
-    });
-
-    const newX = capX;
-    const newY = capY;
-
-    setElements(elements.map(i => {
-      if (i.id === selectedId) {
-        return {
-          ...i,
-          image: newImg,
-          x: newX,
-          y: newY,
-          width: newImg.width,
-          height: newImg.height,
-          rotation: 0,
-          scaleX: 1,
-          scaleY: 1,
-          crop: undefined,
-        } as ImageElement;
-      }
-      return i;
-    }));
-
-    setTempCropData(null);
-    setIsCropping(false);
-  };
-
-  const cancelCrop = () => {
-    setTempCropData(null);
-    setIsCropping(false);
-  };
+      setElements(prev => [...prev, newImage]);
+      setSelectedId(newImage.id);
+      grid.assignElementToZone(zoneId, newImage.id);
+    };
+    input.click();
+  }, [grid, canvasSize, elements, setElements, setSelectedId]);
 
   const sortedElements = [...elements].sort((a, b) => a.zIndex - b.zIndex);
   const sortedImages = sortedElements.filter((el): el is ImageElement => el.type === 'image');
   const sortedTexts = sortedElements.filter((el): el is TextElement => el.type === 'text');
   const sortedEmojis = sortedElements.filter((el): el is EmojiElement => el.type === 'emoji');
+  const sortedStickers = sortedElements.filter((el): el is StickerElement => el.type === 'sticker');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pb-24 md:pb-0">
@@ -544,45 +554,9 @@ const PixCollage = () => {
           <p className="text-sm sm:text-base text-gray-600">{t('app.subtitle')}</p>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
-          {/* Desktop Sidebar */}
-          {!isMobileDevice && (
-            <DesktopSidebar
-              fileInputRef={fileInputRef}
-              onFilesSelected={(files) => onDrop(Array.from(files))}
-              onAddImages={() => (open ? open() : fileInputRef.current?.click())}
-              canvasSize={canvasSize}
-              onCanvasSizeChange={setCanvasSize}
-              snapRotation={snapRotation}
-              onSnapRotationToggle={() => setSnapRotation(!snapRotation)}
-              selectedId={selectedId}
-              onBringToFront={bringToFront}
-              onBringForward={bringForward}
-              onSendBackward={sendBackward}
-              onSendToBack={sendToBack}
-              isCropping={isCropping}
-              onStartCrop={startCrop}
-              onApplyCrop={applyCrop}
-              onCancelCrop={cancelCrop}
-              tempFilters={tempFilters}
-              onUpdateFilter={updateTempFilter}
-              onResetFilters={resetFilters}
-              exportMode={exportMode}
-              onExportModeChange={setExportMode}
-              onDelete={handleDelete}
-              onClear={handleClear}
-              onExport={handleExport}
-              hasElements={elements.length > 0}
-              onAddText={addText}
-              onAddEmoji={() => setShowEmojiPicker(true)}
-              onShowGridSelector={() => setShowGridSelector(true)}
-              onToggleGridOverlay={() => grid.setShowGridOverlay(!grid.showGridOverlay)}
-              showGridOverlay={grid.showGridOverlay}
-            />
-          )}
-
-          {/* Canvas Area */}
-          <div className={`${isMobileDevice ? 'col-span-1' : 'lg:col-span-4'}`}>
+        {/* Canvas Area - Always full width (no sidebar) */}
+        <div>
+          <div>
             <div
               {...getRootProps()}
               className={`bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-6 transition-all duration-300 border-2 ${
@@ -605,7 +579,7 @@ const PixCollage = () => {
                 }}
                 ref={scrollRef}
               >
-                {elements.length === 0 ? (
+                {elements.length === 0 && grid.gridMode === 'free' ? (
                   <div className="text-center text-gray-400 max-w-md">
                     <PhotoIcon className="h-20 w-20 mx-auto mb-4 text-gray-300" />
                     <p className="text-lg font-medium text-gray-500 mb-2">{t('canvas.startCollage')}</p>
@@ -615,11 +589,8 @@ const PixCollage = () => {
                   </div>
                 ) : (
                   <div 
-                    style={{ 
-                      width: canvasSize.width, 
-                      height: canvasSize.height,
-                      border: '4px solid #4f46e5',
-                      boxShadow: '0 0 0 2px rgba(79, 70, 229, 0.1), 0 10px 40px rgba(0, 0, 0, 0.2)',
+                    style={{
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                       borderRadius: '4px',
                       position: 'relative',
                       transform: `scale(${canvasZoom})`,
@@ -642,40 +613,102 @@ const PixCollage = () => {
                         }
                       }}
                     >
-                      <Layer>
-                        {sortedImages.map((img) => (
-                          <ImageComponent
-                            key={img.id}
-                            imageData={img}
-                            isSelected={img.id === selectedId}
-                            onSelect={() => setSelectedId(img.id)}
+                      {grid.gridMode === 'grid' ? (
+                        <>
+                          {/* Images clipped in zones */}
+                          <GridModeLayer
+                            zones={grid.gridZones}
+                            elements={elements}
+                            canvasWidth={canvasSize.width}
+                            canvasHeight={canvasSize.height}
+                            selectedId={selectedId}
+                            onSelectElement={setSelectedId}
                             onTransform={handleTransform}
+                            onAddToZone={handleAddToZone}
                             snapRotation={snapRotation}
-                            isCropping={isCropping && img.id === selectedId}
-                            tempCropData={img.id === selectedId ? tempCropData : null}
-                            onCropChange={setTempCropData}
+                            lineColor={grid.gridLineColor}
+                            lineWidth={grid.gridLineWidth}
+                            lineStyle={grid.gridLineStyle}
                           />
-                        ))}
-                        {sortedTexts.map((txt) => (
-                          <TextComponent
-                            key={txt.id}
-                            textData={txt}
-                            isSelected={txt.id === selectedId}
-                            onSelect={() => setSelectedId(txt.id)}
-                            onTransform={handleTransform}
-                            onDoubleClick={handleTextDoubleClick}
-                          />
-                        ))}
-                        {sortedEmojis.map((emoji) => (
-                          <EmojiComponent
-                            key={emoji.id}
-                            emojiData={emoji}
-                            isSelected={emoji.id === selectedId}
-                            onSelect={() => setSelectedId(emoji.id)}
-                            onTransform={handleTransform}
-                          />
-                        ))}
-                      </Layer>
+                          {/* Texts and emojis NOT clipped - drawn on entire grid */}
+                          <Layer>
+                            {sortedTexts.map((txt) => (
+                              <TextComponent
+                                key={txt.id}
+                                textData={txt}
+                                isSelected={txt.id === selectedId}
+                                onSelect={() => setSelectedId(txt.id)}
+                                onTransform={handleTransform}
+                                onDoubleClick={handleTextDoubleClick}
+                              />
+                            ))}
+                            {sortedEmojis.map((emoji) => (
+                              <EmojiComponent
+                                key={emoji.id}
+                                emojiData={emoji}
+                                isSelected={emoji.id === selectedId}
+                                onSelect={() => setSelectedId(emoji.id)}
+                                onTransform={handleTransform}
+                              />
+                            ))}
+                            {sortedStickers.map((sticker) => (
+                              <StickerComponent
+                                key={sticker.id}
+                                sticker={sticker}
+                                isSelected={sticker.id === selectedId}
+                                onSelect={() => setSelectedId(sticker.id)}
+                                onTransform={handleTransform}
+                                snapRotation={snapRotation}
+                              />
+                            ))}
+                          </Layer>
+                        </>
+                      ) : (
+                        <Layer>
+                          {sortedImages.map((img) => (
+                            <ImageComponent
+                              key={img.id}
+                              imageData={img}
+                              isSelected={img.id === selectedId}
+                              onSelect={() => setSelectedId(img.id)}
+                              onTransform={handleTransform}
+                              snapRotation={snapRotation}
+                              isCropping={isCropping && img.id === selectedId}
+                              tempCropData={img.id === selectedId ? tempCropData : null}
+                              onCropChange={setTempCropData}
+                            />
+                          ))}
+                          {sortedTexts.map((txt) => (
+                            <TextComponent
+                              key={txt.id}
+                              textData={txt}
+                              isSelected={txt.id === selectedId}
+                              onSelect={() => setSelectedId(txt.id)}
+                              onTransform={handleTransform}
+                              onDoubleClick={textEmoji.handleTextDoubleClick}
+                            />
+                          ))}
+                          {sortedEmojis.map((emoji) => (
+                            <EmojiComponent
+                              key={emoji.id}
+                              emojiData={emoji}
+                              isSelected={emoji.id === selectedId}
+                              onSelect={() => setSelectedId(emoji.id)}
+                              onTransform={handleTransform}
+                            />
+                          ))}
+                          {sortedStickers.map((sticker) => (
+                            <StickerComponent
+                              key={sticker.id}
+                              sticker={sticker}
+                              isSelected={sticker.id === selectedId}
+                              onSelect={() => setSelectedId(sticker.id)}
+                              onTransform={handleTransform}
+                              snapRotation={snapRotation}
+                            />
+                          ))}
+                        </Layer>
+                      )}
                       
                       {/* Grid overlay */}
                       <GridOverlay
@@ -683,15 +716,21 @@ const PixCollage = () => {
                         canvasWidth={canvasSize.width}
                         canvasHeight={canvasSize.height}
                         visible={grid.showGridOverlay}
+                        lineColor={grid.gridLineColor}
+                        lineWidth={grid.gridLineWidth}
+                        lineStyle={grid.gridLineStyle}
                       />
                     </Stage>
                   </div>
                 )}
               </div>
             </div>
-            {elements.length > 0 && (
+            {(elements.length > 0 || grid.gridMode === 'grid') && (
               <div className="mt-4 text-center text-sm text-gray-500">
-                {t('canvas.imageCount', { count: elements.length })} • {canvasSize.width}×{canvasSize.height}px
+                {grid.gridMode === 'grid' 
+                  ? `${grid.gridZones.length} ${t('grid.zones')} • ${canvasSize.width}×${canvasSize.height}px`
+                  : `${t('canvas.imageCount', { count: elements.length })} • ${canvasSize.width}×${canvasSize.height}px`
+                }
                 {selectedId && ` • ${t('canvas.imageSelected')}`}
               </div>
             )}
@@ -699,109 +738,79 @@ const PixCollage = () => {
         </div>
       </div>
       
-      {/* Zoom controls */}
-      <div className="fixed bottom-20 left-4 z-40 flex flex-col gap-2">
-        <button
-          onClick={zoomIn}
-          className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
-          title="Zoom +"
-        >
-          <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-          </svg>
-        </button>
-        <button
-          onClick={zoomOut}
-          className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
-          title="Zoom -"
-        >
-          <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-          </svg>
-        </button>
-        <button
-          onClick={zoomReset}
-          className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
-          title="100%"
-        >
-          <span className="text-xs font-bold text-gray-700">1:1</span>
-        </button>
-        <button
-          onClick={zoomToFit}
-          className="p-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
-          title="Adapter à l'écran"
-        >
-          <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-          </svg>
-        </button>
-      </div>
+      {/* Toolbar - Always visible (adapts to portrait/landscape) */}
+      <MobileToolbar
+        isCollapsed={mobileToolbarCollapsed}
+        onToggleCollapse={() => setMobileToolbarCollapsed(!mobileToolbarCollapsed)}
+        isLandscape={isLandscape}
+        isCropping={isCropping}
+        selectedId={selectedId}
+        selectedElementType={selectedElement?.type || null}
+        selectedImageExists={!!selectedImage}
+        hasElements={elements.length > 0}
+        onAddImages={() => (open ? open() : fileInputRef.current?.click())}
+        onEditText={() => selectedElement?.type === 'text' && handleTextDoubleClick(selectedElement.id)}
+        onCrop={elementActions.startCrop}
+        onToggleFilters={() => setShowFilters(s => !s)}
+        onAddText={addTextWithEditor}
+        onAddEmoji={() => setShowEmojiPicker(true)}
+        onShowStickerPicker={() => setShowStickerPicker(true)}
+        onShowGridSelector={() => setShowGridSelector(true)}
+        gridMode={grid.gridMode}
+        onExport={handleExport}
+        onShowLineSettings={() => setShowLineSettings(true)}
+        onShowCanvasSizeMenu={() => setShowCanvasSizeMenu(true)}
+        canvasSize={canvasSize}
+        canvasZoom={canvasZoom}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onZoomReset={zoomReset}
+        onNewComposition={handleNewComposition}
+        onBringForward={elementActions.bringForward}
+        onSendBackward={elementActions.sendBackward}
+        onDelete={elementActions.handleDelete}
+        onApplyCrop={elementActions.applyCrop}
+        onCancelCrop={elementActions.cancelCrop}
+      />
       
-      {/* Mobile Toolbar */}
-      {isMobileDevice && (
-        <MobileToolbar
-          isCollapsed={mobileToolbarCollapsed}
-          onToggleCollapse={() => setMobileToolbarCollapsed(!mobileToolbarCollapsed)}
-          isLandscape={isLandscape}
-          isCropping={isCropping}
-          selectedId={selectedId}
-          selectedElementType={selectedElement?.type || null}
-          selectedImageExists={!!selectedImage}
-          hasElements={elements.length > 0}
-          onAddImages={() => (open ? open() : fileInputRef.current?.click())}
-          onEditText={() => selectedElement?.type === 'text' && handleTextDoubleClick(selectedElement.id, selectedElement.text)}
-          onCrop={startCrop}
-          onToggleFilters={() => setShowFilters(s => !s)}
-          onAddText={addText}
-          onAddEmoji={() => setShowEmojiPicker(true)}
-          onExport={handleExport}
-          onBringForward={bringForward}
-          onSendBackward={sendBackward}
-          onDelete={handleDelete}
-          onApplyCrop={applyCrop}
-          onCancelCrop={cancelCrop}
-        />
-      )}
-      
-      {/* Mobile filters panel */}
+      {/* Filters panel */}
       <MobileFiltersPanel
-        show={isMobileDevice && showFilters && selectedId !== null && !isCropping}
+        show={showFilters && selectedId !== null && !isCropping}
         isLandscape={isLandscape}
         filters={tempFilters}
         onFilterChange={updateTempFilter}
         onReset={resetFilters}
         onClose={() => setShowFilters(false)}
       />
-      {/* Canvas size selector */}
-      <div className="fixed top-16 right-16 z-50">
-        <button
-          onClick={() => setShowCanvasSizeMenu(!showCanvasSizeMenu)}
-          className="px-3 py-2 bg-white/95 backdrop-blur shadow-lg rounded-full border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
-          title="Taille du canvas"
-        >
-          <svg className="h-4 w-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" />
-          </svg>
-          <span className="text-xs font-medium text-gray-700">{canvasSize.width}×{canvasSize.height}</span>
-        </button>
-        {showCanvasSizeMenu && (
-          <div className="absolute top-12 right-0 bg-white shadow-xl rounded-lg border border-gray-200 overflow-hidden min-w-[200px]">
-            {canvasPresets.map(preset => (
-              <button
-                key={preset.id}
-                onClick={() => changeCanvasSize(preset.id)}
-                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${
-                  selectedPreset === preset.id ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700'
-                }`}
-              >
-                <span>{preset.name}</span>
-                <span className="text-xs text-gray-500">{preset.width}×{preset.height}</span>
-              </button>
-            ))}
+      {/* Canvas size selector modal */}
+      {showCanvasSizeMenu && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCanvasSizeMenu(false)}>
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <h4 className="font-semibold text-gray-800 mb-4 text-lg">
+              {t('canvas.size') || 'Taille du canvas'}
+            </h4>
+            <div className="space-y-2">
+              {canvasPresets.map(preset => (
+                <button
+                  key={preset.id}
+                  onClick={() => {
+                    setCanvasSize({ width: preset.width, height: preset.height });
+                    setSelectedPreset(preset.id);
+                    setShowCanvasSizeMenu(false);
+                  }}
+                  className={`w-full px-4 py-3 text-left text-sm rounded-lg transition-colors ${
+                    selectedPreset === preset.id 
+                      ? 'bg-indigo-600 text-white font-medium' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {preset.name} <span className="text-xs opacity-75">({preset.width}×{preset.height})</span>
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
-
+        </div>
+      )}
       {/* Language selector */}
       <div className="fixed top-16 right-4 z-50">
         <button
@@ -829,35 +838,41 @@ const PixCollage = () => {
         )}
       </div>
 
-      {/* Text editing dialog */}
-      {editingTextId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={cancelTextEdit}>
-          <div className="bg-white rounded-xl p-6 shadow-2xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('canvas.editText') || 'Edit Text'}</h3>
-            <textarea
-              value={editingTextValue}
-              onChange={(e) => setEditingTextValue(e.target.value)}
-              className="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              rows={3}
-              autoFocus
+      {/* Grid Line Settings Modal */}
+      {showLineSettings && grid.gridMode === 'grid' && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowLineSettings(false)}>
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <GridLineSettings
+              lineColor={grid.gridLineColor}
+              lineWidth={grid.gridLineWidth}
+              lineStyle={grid.gridLineStyle}
+              onColorChange={grid.setGridLineColor}
+              onWidthChange={grid.setGridLineWidth}
+              onStyleChange={grid.setGridLineStyle}
+              onClose={() => setShowLineSettings(false)}
             />
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={saveTextEdit}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-              >
-                {t('mobile.apply')}
-              </button>
-              <button
-                onClick={cancelTextEdit}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
-              >
-                {t('mobile.cancel')}
-              </button>
-            </div>
           </div>
         </div>
       )}
+
+      {/* Text Editor Modal */}
+      <TextEditorModal
+        show={!!editingTextElement}
+        textElement={editingTextElement}
+        onSave={(id, updates) => {
+          setElements(prev => prev.map(el => 
+            el.id === id && el.type === 'text' ? { ...el, ...updates } as TextElement : el
+          ));
+          setEditingTextElement(null);
+        }}
+        onCancel={() => setEditingTextElement(null)}
+      />
+
+      {/* Export Progress Modal */}
+      <ExportProgressModal
+        show={isExporting}
+        progress={exportProgress}
+      />
 
       {/* Emoji picker */}
       {showEmojiPicker && (
@@ -888,7 +903,7 @@ const PixCollage = () => {
                 <button
                   key={emoji}
                   onClick={() => {
-                    addEmoji(emoji);
+                    textEmoji.addEmoji(emoji);
                     setShowEmojiPicker(false);
                   }}
                   className="text-2xl p-1.5 hover:bg-gray-100 rounded-lg transition-colors active:scale-95"
@@ -906,8 +921,26 @@ const PixCollage = () => {
           </div>
         </div>
       )}
+
+      {/* Sticker picker */}
+      <StickerPicker
+        show={showStickerPicker}
+        onClose={() => setShowStickerPicker(false)}
+        onSelectSticker={(stickerId, category) => {
+          stickers.addSticker(stickerId, category);
+        }}
+      />
       
-      {/* Grid selector modal */}
+      {/* New Composition Modal - shown at startup */}
+      <NewCompositionModal
+        show={showNewComposition}
+        isLandscape={isLandscape}
+        onSelectFree={handleStartFreeMode}
+        onSelectGrid={handleStartGridMode}
+        onClose={() => setShowNewComposition(false)}
+      />
+
+      {/* Grid selector modal - for changing grid after starting */}
       <GridSelector
         selectedGridId={grid.selectedGridId}
         onSelectGrid={grid.selectGrid}

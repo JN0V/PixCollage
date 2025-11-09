@@ -15,7 +15,7 @@ interface MobileToolbarProps {
   isLandscape: boolean;
   isCropping: boolean;
   selectedId: string | null;
-  selectedElementType: 'image' | 'text' | 'emoji' | null;
+  selectedElementType: 'image' | 'text' | 'emoji' | 'sticker' | null;
   selectedImageExists: boolean;
   hasElements: boolean;
   onAddImages: () => void;
@@ -24,7 +24,18 @@ interface MobileToolbarProps {
   onToggleFilters: () => void;
   onAddText: () => void;
   onAddEmoji: () => void;
+  onShowStickerPicker?: () => void;
+  onShowGridSelector: () => void;
+  gridMode: 'free' | 'grid';
   onExport: () => void;
+  onShowLineSettings?: () => void;
+  onShowCanvasSizeMenu?: () => void;
+  canvasSize?: { width: number; height: number };
+  canvasZoom?: number;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onZoomReset?: () => void;
+  onNewComposition?: () => void;
   onBringForward: () => void;
   onSendBackward: () => void;
   onDelete: () => void;
@@ -47,7 +58,16 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
   onToggleFilters,
   onAddText,
   onAddEmoji,
+  onShowStickerPicker,
+  onShowGridSelector,
+  gridMode,
   onExport,
+  onShowLineSettings,
+  onShowCanvasSizeMenu,
+  canvasSize,
+  onZoomIn,
+  onZoomOut,
+  onNewComposition,
   onBringForward,
   onSendBackward,
   onDelete,
@@ -105,11 +125,17 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
       >
         <div className="bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-lg rounded-2xl border border-gray-200 p-3">
           {!isCropping ? (
-            <div className={`grid ${isLandscape ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
+            <div className={`grid ${isLandscape ? 'grid-cols-2' : 'grid-cols-4'} gap-2`}>
               {/* Row 1 */}
               <button
                 onClick={onAddImages}
-                className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-indigo-600 text-white shadow-sm active:scale-95 transition-transform"
+                disabled={gridMode === 'grid'}
+                className={`flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl shadow-sm active:scale-95 transition-transform ${
+                  gridMode === 'grid'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white'
+                }`}
+                title={gridMode === 'grid' ? t('grid.useZoneButtons') || 'Use + buttons in zones' : ''}
               >
                 <PhotoIcon className="h-5 w-5" />
                 <span>{t('mobile.add')}</span>
@@ -167,6 +193,53 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
                 <span>Emoji</span>
               </button>
 
+              {/* Stickers button */}
+              {onShowStickerPicker && (
+                <button
+                  onClick={onShowStickerPicker}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-pink-100 text-pink-700 active:scale-95 transition-transform"
+                >
+                  <span className="text-xl">⭐</span>
+                  <span className="text-[10px]">Sticker</span>
+                </button>
+              )}
+
+              <button
+                onClick={onShowGridSelector}
+                className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-indigo-100 text-indigo-700 active:scale-95 transition-transform"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" />
+                </svg>
+                <span>{t('mobile.grid')}</span>
+              </button>
+
+              {/* Canvas Size - always visible */}
+              {onShowCanvasSizeMenu && canvasSize && (
+                <button
+                  onClick={onShowCanvasSizeMenu}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-gray-100 text-gray-700 active:scale-95 transition-transform"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                  <span className="text-[10px]">{canvasSize.width}×{canvasSize.height}</span>
+                </button>
+              )}
+
+              {/* Grid Line Settings - only visible in grid mode */}
+              {gridMode === 'grid' && onShowLineSettings && (
+                <button
+                  onClick={onShowLineSettings}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-indigo-100 text-indigo-700 active:scale-95 transition-transform"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  <span>{t('grid.lines')}</span>
+                </button>
+              )}
+
               <button
                 onClick={onExport}
                 disabled={!hasElements}
@@ -176,7 +249,44 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
                 <span>{t('mobile.export')}</span>
               </button>
 
-              {/* Row 3 - Z-order and Delete */}
+              {/* Zoom controls */}
+              {onZoomIn && onZoomOut && (
+                <>
+                  <button
+                    onClick={onZoomIn}
+                    className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-gray-100 text-gray-700 active:scale-95 transition-transform"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                    </svg>
+                    <span className="text-[10px]">Zoom+</span>
+                  </button>
+                  
+                  <button
+                    onClick={onZoomOut}
+                    className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-gray-100 text-gray-700 active:scale-95 transition-transform"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                    </svg>
+                    <span className="text-[10px]">Zoom-</span>
+                  </button>
+                </>
+              )}
+
+              {/* New Composition button */}
+              {onNewComposition && (
+                <button
+                  onClick={onNewComposition}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-3 min-h-[56px] text-xs font-medium rounded-xl bg-purple-100 text-purple-700 active:scale-95 transition-transform"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="text-[10px]">Nouveau</span>
+                </button>
+              )}
+
               <button
                 onClick={onBringForward}
                 disabled={!selectedId}

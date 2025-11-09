@@ -140,12 +140,20 @@ export const MobileFiltersPanel: React.FC<MobileFiltersPanelProps> = ({
               </button>
             </div>
 
-            <button
-              onClick={onReset}
-              className="w-full px-3 py-2 mt-2 text-xs font-medium bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
-            >
-              Réinitialiser
-            </button>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <button
+                onClick={onReset}
+                className="px-3 py-2 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              >
+                {t('mobile.reset') || 'Réinitialiser'}
+              </button>
+              <button
+                onClick={onClose}
+                className="px-3 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+              >
+                {t('mobile.apply') || 'Appliquer'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

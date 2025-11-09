@@ -47,16 +47,25 @@
     "clickToSelect": "Clic pour sélectionner"
   },
   "canvas": {
-    "startCollage": "Commencez votre collage",
-    "dragImages": "Glissez vos images ici ou cliquez sur \"Ajouter\"",
-    "imageCount": "{{count}} image",
-    "imageCount_plural": "{{count}} images",
-    "imageSelected": "Image sélectionnée",
+    "startCollage": "Commencez votre collage !",
+    "dragImages": "Glissez-déposez des images ici ou cliquez sur Ajouter des images",
+    "imageCount": "{{count}} élément",
+    "imageCount_plural": "{{count}} éléments",
+    "imageSelected": "Sélectionné",
     "newText": "Nouveau texte",
-    "addText": "Ajouter texte",
-    "addEmoji": "Ajouter emoji",
-    "editText": "Éditer texte",
+    "addText": "Texte",
+    "addEmoji": "Emoji",
+    "editText": "Éditer le texte",
     "selectEmoji": "Sélectionner emoji"
+  },
+  "text": {
+    "placeholder": "Entrez votre texte...",
+    "font": "Police",
+    "size": "Taille",
+    "style": "Style",
+    "align": "Alignement",
+    "color": "Couleur",
+    "preview": "Aperçu"
   },
   "mobile": {
     "add": "Ajouter",
@@ -73,14 +82,45 @@
     "language": "Langue",
     "grid": "Grille"
   },
+  "composition": {
+    "newTitle": "Nouvelle Composition",
+    "subtitle": "Choisissez comment vous souhaitez composer votre image",
+    "freeMode": "Mode Libre",
+    "gridMode": "Mode Grille",
+    "freeDesc": "Positionnez vos images librement sur le canvas sans contraintes",
+    "gridDesc": "Choisissez une grille prédéfinie et remplissez les zones",
+    "start": "Commencer",
+    "selectLayout": "Choisir une disposition"
+  },
   "grid": {
     "title": "Disposition en grille",
+    "modeFree": "Mode Libre",
+    "modeGrid": "Mode Grille",
     "selectGrid": "Sélectionner une grille",
     "showGrid": "Afficher la grille",
     "hideGrid": "Masquer la grille",
     "autoFill": "Remplir auto",
     "clearGrid": "Réinitialiser",
-    "snapToGrid": "Aimanter"
+    "snapToGrid": "Aimanter",
+    "zones": "zones",
+    "useZoneButtons": "Utilisez les boutons + dans les zones",
+    "lines": "Lignes",
+    "lineSettings": "Paramètres des lignes",
+    "lineColor": "Couleur",
+    "lineWidth": "Épaisseur",
+    "lineStyle": "Style",
+    "solid": "Plein",
+    "dashed": "Tirets",
+    "dotted": "Points",
+    "dashDot": "Tiret-Point",
+    "longDash": "Tirets longs",
+    "zigzag": "Zigzag"
+  },
+  "export": {
+    "inProgress": "Export en cours...",
+    "pleaseWait": "Veuillez patienter",
+    "progress": "Progression",
+    "doNotClose": "Ne fermez pas cette fenêtre"
   },
   "toast": {
     "imageAdded": "{{count}} image ajoutée",

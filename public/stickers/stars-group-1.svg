@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Group of 5 stars in artistic arrangement -->
+  
+  <!-- Large star bottom left -->
+  <path d="M 100 400 L 120 340 L 80 300 L 145 295 L 170 235 L 195 295 L 260 300 L 220 340 L 240 400 L 170 365 Z" 
+        fill="#FFD700" stroke="#FFA500" stroke-width="3"/>
+  
+  <!-- Medium star top right -->
+  <path d="M 380 120 L 390 90 L 370 70 L 403 67 L 415 40 L 427 67 L 460 70 L 440 90 L 450 120 L 415 100 Z" 
+        fill="#FFD700" stroke="#FFA500" stroke-width="2"/>
+  
+  <!-- Small star top left -->
+  <path d="M 120 80 L 125 65 L 115 55 L 132 53 L 138 40 L 144 53 L 161 55 L 151 65 L 156 80 L 138 68 Z" 
+        fill="#FFEB3B" stroke="#FFA500" stroke-width="1.5"/>
+  
+  <!-- Small sparkle center -->
+  <path d="M 280 250 L 285 235 L 275 225 L 292 223 L 298 210 L 304 223 L 321 225 L 311 235 L 316 250 L 298 238 Z" 
+        fill="#FFEB3B" stroke="#FFA500" stroke-width="1.5"/>
+  
+  <!-- Tiny star right -->
+  <path d="M 430 280 L 433 270 L 427 264 L 438 263 L 442 255 L 446 263 L 457 264 L 451 270 L 454 280 L 442 273 Z" 
+        fill="#FFF9C4" stroke="#FFA500" stroke-width="1"/>
+</svg>

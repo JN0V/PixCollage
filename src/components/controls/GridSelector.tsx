@@ -2,7 +2,7 @@ import React from 'react';
 import { gridTemplates } from '../../types/grid';
 
 interface GridSelectorProps {
-  selectedGridId: string;
+  selectedGridId: string | null;
   onSelectGrid: (gridId: string) => void;
   show: boolean;
   onClose: () => void;

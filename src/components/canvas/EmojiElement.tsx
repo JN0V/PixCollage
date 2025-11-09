@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Text, Transformer } from 'react-konva';
 import Konva from 'konva';
+import { useMultiTouchGestures } from '../../hooks/useMultiTouchGestures';
 
 interface EmojiData {
   id: string;
@@ -29,6 +30,25 @@ export const EmojiElement: React.FC<EmojiElementProps> = ({
   const emojiRef = useRef<Konva.Text>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
+  // Multi-touch gestures
+  const { isMultiTouchActive, handlers: multiTouchHandlers } = useMultiTouchGestures({
+    nodeRef: emojiRef,
+    onTransformEnd: (transform) => {
+      const node = emojiRef.current;
+      if (!node) return;
+      
+      const scaleChange = Math.max(transform.scaleX, transform.scaleY);
+      onTransform(emojiData.id, {
+        ...transform,
+        fontSize: Math.max(12, emojiData.fontSize * scaleChange),
+        scaleX: 1,
+        scaleY: 1,
+      });
+    },
+    snapRotation: true,
+    enabled: true,
+  });
+
   useEffect(() => {
     if (isSelected && trRef.current && emojiRef.current) {
       trRef.current.nodes([emojiRef.current]);
@@ -47,7 +67,7 @@ export const EmojiElement: React.FC<EmojiElementProps> = ({
         rotation={emojiData.rotation}
         scaleX={emojiData.scaleX}
         scaleY={emojiData.scaleY}
-        draggable
+        draggable={!isMultiTouchActive}
         onClick={onSelect}
         onTap={onSelect}
         onDragEnd={(e) => {
@@ -73,6 +93,15 @@ export const EmojiElement: React.FC<EmojiElementProps> = ({
             scaleY: 1,
           });
         }}
+        onTouchStart={(e) => {
+          const evt = e.evt as TouchEvent;
+          if (evt.touches.length === 2) {
+            onSelect();
+          }
+          multiTouchHandlers.onTouchStart(e);
+        }}
+        onTouchMove={multiTouchHandlers.onTouchMove}
+        onTouchEnd={multiTouchHandlers.onTouchEnd}
       />
       {isSelected && (
         <Transformer

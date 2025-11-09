@@ -11,7 +11,7 @@ interface MultiTouchState {
 }
 
 interface UseMultiTouchGesturesProps {
-  nodeRef: React.RefObject<Konva.Image | null>;
+  nodeRef: React.RefObject<Konva.Image | Konva.Text | null>;
   onTransformEnd: (transform: {
     x: number;
     y: number;

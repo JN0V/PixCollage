@@ -1,0 +1,77 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Éclatement - Stars and particles bursting outward -->
+  
+  <!-- Central energy burst -->
+  <defs>
+    <radialGradient id="energyGlow">
+      <stop offset="0%" style="stop-color:#FFE66D;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFD700;stop-opacity:0.7" />
+      <stop offset="100%" style="stop-color:#FFA07A;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <circle cx="256" cy="256" r="80" fill="url(#energyGlow)"/>
+  <circle cx="256" cy="256" r="40" fill="#FFE66D"/>
+  
+  <!-- Bursting stars - large -->
+  <g transform="translate(256, 130)">
+    <path d="M 0 -25 L 4 -4 L 25 0 L 4 4 L 0 25 L -4 4 L -25 0 L -4 -4 Z" fill="#FFD700"/>
+  </g>
+  
+  <g transform="translate(380, 256)">
+    <path d="M 0 -25 L 4 -4 L 25 0 L 4 4 L 0 25 L -4 4 L -25 0 L -4 -4 Z" fill="#FFA07A"/>
+  </g>
+  
+  <g transform="translate(256, 382)">
+    <path d="M 0 -25 L 4 -4 L 25 0 L 4 4 L 0 25 L -4 4 L -25 0 L -4 -4 Z" fill="#FF8787"/>
+  </g>
+  
+  <g transform="translate(132, 256)">
+    <path d="M 0 -25 L 4 -4 L 25 0 L 4 4 L 0 25 L -4 4 L -25 0 L -4 -4 Z" fill="#FF6B6B"/>
+  </g>
+  
+  <!-- Bursting stars - diagonal -->
+  <g transform="translate(350, 162)">
+    <path d="M 0 -20 L 3 -3 L 20 0 L 3 3 L 0 20 L -3 3 L -20 0 L -3 -3 Z" fill="#FFEB3B"/>
+  </g>
+  
+  <g transform="translate(350, 350)">
+    <path d="M 0 -20 L 3 -3 L 20 0 L 3 3 L 0 20 L -3 3 L -20 0 L -3 -3 Z" fill="#FFA07A"/>
+  </g>
+  
+  <g transform="translate(162, 350)">
+    <path d="M 0 -20 L 3 -3 L 20 0 L 3 3 L 0 20 L -3 3 L -20 0 L -3 -3 Z" fill="#FF8787"/>
+  </g>
+  
+  <g transform="translate(162, 162)">
+    <path d="M 0 -20 L 3 -3 L 20 0 L 3 3 L 0 20 L -3 3 L -20 0 L -3 -3 Z" fill="#FFD700"/>
+  </g>
+  
+  <!-- Motion lines -->
+  <line x1="256" y1="190" x2="256" y2="100" stroke="#FFD700" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="322" y1="190" x2="380" y2="140" stroke="#FFEB3B" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="322" y1="322" x2="380" y2="380" stroke="#FFA07A" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="256" y1="322" x2="256" y2="412" stroke="#FF8787" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="190" y1="322" x2="132" y2="380" stroke="#FF6B6B" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="190" y1="190" x2="132" y2="132" stroke="#FFD700" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  
+  <!-- Small particles -->
+  <circle cx="256" cy="90" r="5" fill="#FFE66D"/>
+  <circle cx="390" cy="130" r="4" fill="#FFD700"/>
+  <circle cx="422" cy="256" r="5" fill="#FFA07A"/>
+  <circle cx="390" cy="390" r="4" fill="#FF8787"/>
+  <circle cx="256" cy="422" r="5" fill="#FF6B6B"/>
+  <circle cx="122" cy="390" r="4" fill="#FFA07A"/>
+  <circle cx="90" cy="256" r="5" fill="#FFD700"/>
+  <circle cx="122" cy="122" r="4" fill="#FFE66D"/>
+  
+  <!-- Tiny sparkles -->
+  <circle cx="280" cy="120" r="3" fill="#FFEB3B" opacity="0.8"/>
+  <circle cx="370" cy="180" r="3" fill="#FFD700" opacity="0.8"/>
+  <circle cx="392" cy="280" r="3" fill="#FFA07A" opacity="0.8"/>
+  <circle cx="370" cy="332" r="3" fill="#FF8787" opacity="0.8"/>
+  <circle cx="280" cy="392" r="3" fill="#FF6B6B" opacity="0.8"/>
+  <circle cx="180" cy="370" r="3" fill="#FFA07A" opacity="0.8"/>
+  <circle cx="120" cy="280" r="3" fill="#FFD700" opacity="0.8"/>
+  <circle cx="142" cy="180" r="3" fill="#FFE66D" opacity="0.8"/>
+</svg>

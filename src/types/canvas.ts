@@ -35,6 +35,8 @@ export interface TextElement extends BaseElement {
   fontSize: number;
   fontFamily: string;
   fill: string;
+  fontStyle?: 'normal' | 'bold' | 'italic' | 'bold italic';
+  align?: 'left' | 'center' | 'right';
   width?: number;
 }
 
@@ -44,7 +46,14 @@ export interface EmojiElement extends BaseElement {
   fontSize: number;
 }
 
-export type CanvasElement = ImageElement | TextElement | EmojiElement;
+export interface StickerElement extends BaseElement {
+  type: 'sticker';
+  stickerId: string;
+  category: 'stars' | 'sparkles' | 'hearts' | 'explosion';
+  size: number; // Base size in pixels
+}
+
+export type CanvasElement = ImageElement | TextElement | EmojiElement | StickerElement;
 
 export interface TempCropData {
   x: number;

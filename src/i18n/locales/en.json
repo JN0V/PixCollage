@@ -47,16 +47,25 @@
     "clickToSelect": "Click to select"
   },
   "canvas": {
-    "startCollage": "Start your collage",
-    "dragImages": "Drag your images here or click \"Add\"",
-    "imageCount": "{{count}} image",
-    "imageCount_plural": "{{count}} images",
-    "imageSelected": "Image selected",
+    "startCollage": "Start your collage!",
+    "dragImages": "Drag and drop images here or click Add Images",
+    "imageCount": "{{count}} element",
+    "imageCount_plural": "{{count}} elements",
+    "imageSelected": "Selected",
     "newText": "New Text",
-    "addText": "Add Text",
-    "addEmoji": "Add Emoji",
+    "addText": "Text",
+    "addEmoji": "Emoji",
     "editText": "Edit Text",
     "selectEmoji": "Select Emoji"
+  },
+  "text": {
+    "placeholder": "Enter your text...",
+    "font": "Font",
+    "size": "Size",
+    "style": "Style",
+    "align": "Alignment",
+    "color": "Color",
+    "preview": "Preview"
   },
   "mobile": {
     "add": "Add",
@@ -73,14 +82,45 @@
     "grid": "Grid",
     "delete": "Delete"
   },
+  "composition": {
+    "newTitle": "New Composition",
+    "subtitle": "Choose how you want to compose your image",
+    "freeMode": "Free Mode",
+    "gridMode": "Grid Mode",
+    "freeDesc": "Position your images freely on the canvas without constraints",
+    "gridDesc": "Choose a predefined grid and fill the zones",
+    "start": "Start",
+    "selectLayout": "Select a layout"
+  },
   "grid": {
     "title": "Grid Layout",
+    "modeFree": "Free Mode",
+    "modeGrid": "Grid Mode",
     "selectGrid": "Select Grid",
     "showGrid": "Show Grid",
     "hideGrid": "Hide Grid",
     "autoFill": "Auto Fill",
     "clearGrid": "Clear Grid",
-    "snapToGrid": "Snap to Grid"
+    "snapToGrid": "Snap to Grid",
+    "zones": "zones",
+    "useZoneButtons": "Use + buttons in zones to add images",
+    "lines": "Lines",
+    "lineSettings": "Line Settings",
+    "lineColor": "Color",
+    "lineWidth": "Width",
+    "lineStyle": "Style",
+    "solid": "Solid",
+    "dashed": "Dashed",
+    "dotted": "Dotted",
+    "dashDot": "Dash-Dot",
+    "longDash": "Long Dash",
+    "zigzag": "Zigzag"
+  },
+  "export": {
+    "inProgress": "Export in progress...",
+    "pleaseWait": "Please wait",
+    "progress": "Progress",
+    "doNotClose": "Do not close this window"
   },
   "toast": {
     "imageAdded": "{{count}} image added",

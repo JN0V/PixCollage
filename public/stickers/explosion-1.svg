@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Explosion effect with radiating elements -->
+  
+  <!-- Center burst circle -->
+  <circle cx="256" cy="256" r="60" fill="#FF6B6B" opacity="0.8"/>
+  <circle cx="256" cy="256" r="40" fill="#FFE66D" opacity="0.9"/>
+  
+  <!-- Radiating spikes -->
+  <path d="M 256 256 L 280 180 L 265 240 Z" fill="#FF8787" opacity="0.7"/>
+  <path d="M 256 256 L 332 232 L 275 245 Z" fill="#FFA07A" opacity="0.7"/>
+  <path d="M 256 256 L 320 310 L 270 265 Z" fill="#FF6B6B" opacity="0.7"/>
+  <path d="M 256 256 L 240 340 L 250 270 Z" fill="#FF8787" opacity="0.7"/>
+  <path d="M 256 256 L 180 300 L 240 265 Z" fill="#FFA07A" opacity="0.7"/>
+  <path d="M 256 256 L 200 200 L 245 245 Z" fill="#FF6B6B" opacity="0.7"/>
+  
+  <!-- Outer particles -->
+  <circle cx="140" cy="160" r="12" fill="#FFD700"/>
+  <circle cx="380" cy="190" r="15" fill="#FFE66D"/>
+  <circle cx="350" cy="350" r="10" fill="#FFD700"/>
+  <circle cx="170" cy="360" r="13" fill="#FFE66D"/>
+  <circle cx="390" cy="290" r="8" fill="#FFA07A"/>
+  <circle cx="150" cy="270" r="11" fill="#FF8787"/>
+  
+  <!-- Star bursts -->
+  <path d="M 120 120 L 125 105 L 115 95 L 132 93 L 138 80 L 144 93 L 161 95 L 151 105 L 156 120 L 138 108 Z" 
+        fill="#FFEB3B"/>
+  <path d="M 400 140 L 405 125 L 395 115 L 412 113 L 418 100 L 424 113 L 441 115 L 431 125 L 436 140 L 418 128 Z" 
+        fill="#FFD700"/>
+</svg>

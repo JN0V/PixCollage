@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Constellation - 7 stars connected by subtle lines -->
+  
+  <!-- Connection lines (very subtle) -->
+  <line x1="150" y1="120" x2="200" y2="200" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
+  <line x1="200" y1="200" x2="300" y2="180" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
+  <line x1="300" y1="180" x2="350" y2="250" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
+  <line x1="350" y1="250" x2="320" y2="350" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
+  <line x1="320" y1="350" x2="220" y2="320" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
+  <line x1="220" y1="320" x2="180" y2="260" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
+  <line x1="180" y1="260" x2="150" y2="120" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Stars at constellation points -->
+  <path d="M 150 120 L 155 105 L 145 95 L 162 93 L 168 80 L 174 93 L 191 95 L 181 105 L 186 120 L 168 108 Z" fill="#FFD700"/>
+  <path d="M 200 200 L 207 180 L 193 165 L 215 162 L 223 145 L 231 162 L 253 165 L 239 180 L 246 200 L 223 183 Z" fill="#FFEB3B"/>
+  <path d="M 300 180 L 306 163 L 294 150 L 314 148 L 321 133 L 328 148 L 348 150 L 336 163 L 342 180 L 321 166 Z" fill="#FFD700"/>
+  <path d="M 350 250 L 355 235 L 345 225 L 362 223 L 368 210 L 374 223 L 391 225 L 381 235 L 386 250 L 368 238 Z" fill="#FFF9C4"/>
+  <path d="M 320 350 L 327 330 L 313 315 L 335 312 L 343 295 L 351 312 L 373 315 L 359 330 L 366 350 L 343 333 Z" fill="#FFEB3B"/>
+  <path d="M 220 320 L 226 303 L 214 290 L 234 288 L 241 273 L 248 288 L 268 290 L 256 303 L 262 320 L 241 306 Z" fill="#FFD700"/>
+  <path d="M 180 260 L 185 245 L 175 235 L 192 233 L 198 220 L 204 233 L 221 235 L 211 245 L 216 260 L 198 248 Z" fill="#FFF9C4"/>
+</svg>

@@ -76,6 +76,7 @@ interface DesktopSidebarProps {
   onShowGridSelector: () => void;
   onToggleGridOverlay: () => void;
   showGridOverlay: boolean;
+  gridMode: 'free' | 'grid';
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -109,6 +110,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   onShowGridSelector,
   onToggleGridOverlay,
   showGridOverlay,
+  gridMode,
 }) => {
   const { t } = useTranslation();
 
@@ -120,40 +122,44 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           <PhotoIcon className="h-5 w-5 text-indigo-600" />
           {t('sidebar.images')}
         </h3>
+        
         <input
           ref={fileInputRef}
           type="file"
           multiple
           accept="image/*"
-          onChange={(e) => {
-            if (e.target.files) {
-              onFilesSelected(e.target.files);
-            }
-          }}
+          onChange={(e) => e.target.files && onFilesSelected(e.target.files)}
           className="hidden"
         />
-        <div className="space-y-2">
+        
+        <button
+          onClick={onAddImages}
+          disabled={gridMode === 'grid'}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-colors text-sm font-medium shadow-md ${
+            gridMode === 'grid'
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-lg'
+          }`}
+          title={gridMode === 'grid' ? t('grid.useZoneButtons') || 'Utilisez les boutons + dans les zones' : ''}
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          {t('sidebar.addImages')}
+        </button>
+        <div className="grid grid-cols-2 gap-2 mt-3">
           <button
-            onClick={onAddImages}
-            className="w-full px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg"
+            onClick={onAddText}
+            className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors text-sm font-medium"
           >
-            <PhotoIcon className="h-5 w-5" />
-            {t('sidebar.add')}
+            {t('canvas.addText')}
           </button>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={onAddText}
-              className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors text-sm font-medium"
-            >
-              {t('canvas.addText')}
-            </button>
-            <button
-              onClick={onAddEmoji}
-              className="px-3 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg transition-colors text-sm font-medium"
-            >
-              {t('canvas.addEmoji')}
-            </button>
-          </div>
+          <button
+            onClick={onAddEmoji}
+            className="px-3 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg transition-colors text-sm font-medium"
+          >
+            {t('canvas.addEmoji')}
+          </button>
         </div>
         <p className="text-xs text-gray-500 mt-2 text-center">{t('sidebar.dragDrop')}</p>
       </div>
@@ -205,28 +211,30 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         </div>
       </div>
 
-      {/* Grid Layout */}
-      <div className="bg-white/80 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-gray-100">
-        <h3 className="font-semibold text-gray-800 mb-3">{t('sidebar.grid')}</h3>
-        <div className="space-y-2">
-          <button
-            onClick={onShowGridSelector}
-            className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium"
-          >
-            {t('grid.selectGrid')}
-          </button>
-          <button
-            onClick={onToggleGridOverlay}
-            className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-              showGridOverlay 
-                ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {showGridOverlay ? t('grid.hideGrid') : t('grid.showGrid')}
-          </button>
+      {/* Grid Layout - only shown in grid mode */}
+      {gridMode === 'grid' && (
+        <div className="bg-white/80 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-gray-100">
+          <h3 className="font-semibold text-gray-800 mb-3">{t('sidebar.grid')}</h3>
+          <div className="space-y-2">
+            <button
+              onClick={onShowGridSelector}
+              className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium"
+            >
+              {t('grid.selectGrid')}
+            </button>
+            <button
+              onClick={onToggleGridOverlay}
+              className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                showGridOverlay 
+                  ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {showGridOverlay ? t('grid.hideGrid') : t('grid.showGrid')}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Snap Rotation */}
       <div className="bg-white/80 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-gray-100">

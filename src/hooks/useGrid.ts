@@ -3,6 +3,8 @@ import type { GridZone } from '../types/grid';
 import { gridTemplates, findClosestZone, getAbsoluteZone } from '../types/grid';
 import type { CanvasElement, ImageElement } from '../types/canvas';
 
+export type GridMode = 'free' | 'grid';
+
 interface UseGridProps {
   canvasSize: { width: number; height: number };
   elements: CanvasElement[];
@@ -10,9 +12,13 @@ interface UseGridProps {
 }
 
 export const useGrid = ({ canvasSize, elements, setElements }: UseGridProps) => {
-  const [selectedGridId, setSelectedGridId] = useState<string>('none');
+  const [gridMode, setGridMode] = useState<GridMode>('free');
+  const [selectedGridId, setSelectedGridId] = useState<string | null>(null);
   const [gridZones, setGridZones] = useState<GridZone[]>([]);
-  const [showGridOverlay, setShowGridOverlay] = useState(false);
+  const [showGridOverlay, setShowGridOverlay] = useState(true);
+  const [gridLineColor, setGridLineColor] = useState('#6366f1');
+  const [gridLineWidth, setGridLineWidth] = useState(2);
+  const [gridLineStyle, setGridLineStyle] = useState<'solid' | 'dashed' | 'dotted' | 'dash-dot' | 'long-dash' | 'zigzag'>('dashed');
 
   const selectGrid = useCallback((gridId: string) => {
     const template = gridTemplates.find(t => t.id === gridId);
@@ -95,13 +101,47 @@ export const useGrid = ({ canvasSize, elements, setElements }: UseGridProps) => 
     setGridZones(prev => prev.map(z => ({ ...z, imageId: undefined })));
   }, []);
 
+  // Assign element to zone (for grid mode)
+  const assignElementToZone = useCallback((zoneId: string, elementId: string) => {
+    setGridZones(prev => prev.map(z => 
+      z.id === zoneId ? { ...z, elementId } : z
+    ));
+  }, []);
+
+  // Remove element from zone
+  const removeElementFromZone = useCallback((zoneId: string) => {
+    setGridZones(prev => prev.map(z => 
+      z.id === zoneId ? { ...z, elementId: null } : z
+    ));
+  }, []);
+
+  // Toggle between free and grid mode
+  const toggleGridMode = useCallback(() => {
+    setGridMode(prev => prev === 'free' ? 'grid' : 'free');
+    if (gridMode === 'free' && gridZones.length === 0 && gridTemplates.length > 0) {
+      // Auto-select first grid when switching to grid mode for first time
+      selectGrid(gridTemplates[0].id);
+    }
+  }, [gridMode, gridZones.length, selectGrid]);
+
   return {
+    gridMode,
+    setGridMode,
+    toggleGridMode,
     selectedGridId,
     gridZones,
     showGridOverlay,
     setShowGridOverlay,
+    gridLineColor,
+    setGridLineColor,
+    gridLineWidth,
+    setGridLineWidth,
+    gridLineStyle,
+    setGridLineStyle,
     selectGrid,
     assignImageToZone,
+    assignElementToZone,
+    removeElementFromZone,
     snapToGrid,
     autoFillGrid,
     clearGrid,
