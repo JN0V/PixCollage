@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 import { Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { useMultiTouchGestures } from '../../hooks/useMultiTouchGestures';
@@ -26,7 +26,7 @@ interface TextElementProps {
   onDoubleClick: (id: string, currentText: string) => void;
 }
 
-export const TextElement: React.FC<TextElementProps> = ({
+const TextElementInner: React.FC<TextElementProps> = ({
   textData,
   isSelected,
   onSelect,
@@ -130,3 +130,6 @@ export const TextElement: React.FC<TextElementProps> = ({
     </>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const TextElement = memo(TextElementInner);

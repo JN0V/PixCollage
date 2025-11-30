@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Layer, Rect, Group, Line } from 'react-konva';
 import type { GridZone } from '../../types/grid';
 import { getAbsoluteZone } from '../../types/grid';
@@ -63,7 +63,7 @@ const renderLine = (
   );
 };
 
-export const GridOverlay: React.FC<GridOverlayProps> = ({
+const GridOverlayInner: React.FC<GridOverlayProps> = ({
   zones,
   canvasWidth,
   canvasHeight,
@@ -165,3 +165,6 @@ export const GridOverlay: React.FC<GridOverlayProps> = ({
     </Layer>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const GridOverlay = memo(GridOverlayInner);

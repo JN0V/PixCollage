@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, memo } from 'react';
 import { Group, Image as KonvaImage, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import type { StickerElement as StickerData } from '../../types/canvas';
@@ -13,7 +13,7 @@ interface StickerComponentProps {
   snapRotation?: boolean;
 }
 
-export const StickerComponent: React.FC<StickerComponentProps> = ({
+const StickerComponentInner: React.FC<StickerComponentProps> = ({
   sticker,
   isSelected,
   onSelect,
@@ -64,7 +64,7 @@ export const StickerComponent: React.FC<StickerComponentProps> = ({
     }
   }, [isSelected, imageError]);
 
-  const handleDragEnd = (e: any) => {
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     onTransform(sticker.id, {
       x: e.target.x(),
       y: e.target.y(),
@@ -172,3 +172,6 @@ export const StickerComponent: React.FC<StickerComponentProps> = ({
     </Group>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const StickerComponent = memo(StickerComponentInner);

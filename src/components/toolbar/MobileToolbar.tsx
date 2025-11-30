@@ -1,4 +1,6 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSafeArea } from '../../hooks/useSafeArea';
 import {
   PhotoIcon,
   ScissorsIcon,
@@ -43,7 +45,7 @@ interface MobileToolbarProps {
   onCancelCrop: () => void;
 }
 
-export const MobileToolbar: React.FC<MobileToolbarProps> = ({
+const MobileToolbarInner: React.FC<MobileToolbarProps> = ({
   isCollapsed,
   onToggleCollapse,
   isLandscape,
@@ -75,14 +77,19 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
   onCancelCrop,
 }) => {
   const { t } = useTranslation();
+  const safeArea = useSafeArea();
+
+  // Calculate bottom offset for Android 3-button nav or iOS home indicator
+  const bottomOffset = !isLandscape ? Math.max(safeArea.bottom, 0) : 0;
 
   if (isCollapsed) {
     return (
       <button
         onClick={onToggleCollapse}
         className={`fixed z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-2xl rounded-full p-3 hover:from-indigo-700 hover:to-purple-700 transition-all ${
-          isLandscape ? 'right-4 top-1/2 -translate-y-1/2' : 'bottom-4 right-4'
+          isLandscape ? 'right-4 top-1/2 -translate-y-1/2' : 'right-4'
         }`}
+        style={{ bottom: isLandscape ? undefined : `${16 + bottomOffset}px` }}
         title="Afficher la barre d'outils"
       >
         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,8 +104,9 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
       className={`fixed z-50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-2xl border border-gray-200 ${
         isLandscape
           ? 'right-0 top-0 bottom-0 w-48 flex flex-col'
-          : 'bottom-0 left-0 right-0'
+          : 'left-0 right-0'
       }`}
+      style={{ bottom: isLandscape ? 0 : bottomOffset }}
     >
       {/* Collapse button */}
       <button
@@ -342,3 +350,6 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
     </div>
   );
 };
+
+// Memoize to prevent re-renders from parent state changes
+export const MobileToolbar = memo(MobileToolbarInner);

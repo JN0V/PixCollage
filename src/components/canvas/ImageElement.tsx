@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 import { Image as KonvaImage, Transformer, Rect } from 'react-konva';
 import Konva from 'konva';
 import { useMultiTouchGestures } from '../../hooks/useMultiTouchGestures';
@@ -56,7 +56,7 @@ const snapToGrid = (rotation: number, shouldSnap: boolean): number => {
   return minDiff < 15 ? closestAngle : rotation;
 };
 
-export const ImageElement: React.FC<ImageElementProps> = ({
+const ImageElementInner: React.FC<ImageElementProps> = ({
   imageData,
   isSelected,
   onSelect,
@@ -120,7 +120,7 @@ export const ImageElement: React.FC<ImageElementProps> = ({
     node.clearCache();
     node.filters([]);
 
-    const filtersToApply: any[] = [];
+    const filtersToApply: Parameters<typeof node.filters>[0] = [];
     
     if (imgFilters.brightness !== 100 || imgFilters.contrast !== 100) {
       filtersToApply.push(Konva.Filters.Brighten, Konva.Filters.Contrast);
@@ -169,6 +169,7 @@ export const ImageElement: React.FC<ImageElementProps> = ({
     }, 800);
     
     return () => clearTimeout(cacheTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageData.filters, isCropping]);
 
   return (
@@ -270,7 +271,7 @@ export const ImageElement: React.FC<ImageElementProps> = ({
               const imgNode = stage ? (stage.findOne(`.image-${imageData.id}`) as Konva.Image | null) : null;
               const boundingBox = imgNode
                 ? imgNode.getClientRect({ skipStroke: true, skipShadow: true })
-                : { x: imageData.x, y: imageData.y, width: imageData.width * imageData.scaleX, height: imageData.height * imageData.scaleY } as any;
+                : { x: imageData.x, y: imageData.y, width: imageData.width * imageData.scaleX, height: imageData.height * imageData.scaleY };
               const minX = boundingBox.x;
               const minY = boundingBox.y;
               const maxX = boundingBox.x + boundingBox.width - tempCropData.width;
@@ -318,3 +319,6 @@ export const ImageElement: React.FC<ImageElementProps> = ({
     </>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const ImageElement = memo(ImageElementInner);

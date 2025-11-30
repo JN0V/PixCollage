@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface GridLineSettingsProps {
@@ -24,7 +24,7 @@ const PRESET_COLORS = [
   { name: 'Pink', value: '#ec4899' },
 ];
 
-export const GridLineSettings: React.FC<GridLineSettingsProps> = ({
+const GridLineSettingsInner: React.FC<GridLineSettingsProps> = ({
   lineColor,
   lineWidth,
   lineStyle,
@@ -221,3 +221,6 @@ export const GridLineSettings: React.FC<GridLineSettingsProps> = ({
     </div>
   );
 };
+
+// Memoize to prevent re-renders
+export const GridLineSettings = memo(GridLineSettingsInner);

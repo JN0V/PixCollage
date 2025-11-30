@@ -60,6 +60,7 @@ export interface TempCropData {
   y: number;
   width: number;
   height: number;
+  originalRotation?: number; // Store original rotation when cropping rotated images
 }
 
 export interface CanvasPreset {

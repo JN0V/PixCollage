@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { stickerLibrary, type Sticker } from '../../data/stickers';
 
@@ -17,7 +17,7 @@ const categoryLabels: Record<Category, { name: string; emoji: string }> = {
   explosion: { name: 'Explosion', emoji: '💥' },
 };
 
-export const StickerPicker: React.FC<StickerPickerProps> = ({
+const StickerPickerInner: React.FC<StickerPickerProps> = ({
   show,
   onClose,
   onSelectSticker,
@@ -98,3 +98,5 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
     </div>
   );
 };
+
+export const StickerPicker = memo(StickerPickerInner);

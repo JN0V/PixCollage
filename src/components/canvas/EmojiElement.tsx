@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 import { Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { useMultiTouchGestures } from '../../hooks/useMultiTouchGestures';
@@ -21,7 +21,7 @@ interface EmojiElementProps {
   onTransform: (id: string, updates: Partial<Omit<EmojiData, 'id'>>) => void;
 }
 
-export const EmojiElement: React.FC<EmojiElementProps> = ({
+const EmojiElementInner: React.FC<EmojiElementProps> = ({
   emojiData,
   isSelected,
   onSelect,
@@ -118,3 +118,6 @@ export const EmojiElement: React.FC<EmojiElementProps> = ({
     </>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const EmojiElement = memo(EmojiElementInner);

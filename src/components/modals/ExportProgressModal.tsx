@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface ExportProgressModalProps {
@@ -6,7 +6,7 @@ interface ExportProgressModalProps {
   progress: number; // 0 to 100
 }
 
-export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
+const ExportProgressModalInner: React.FC<ExportProgressModalProps> = ({
   show,
   progress,
 }) => {
@@ -53,3 +53,5 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
     </div>
   );
 };
+
+export const ExportProgressModal = memo(ExportProgressModalInner);

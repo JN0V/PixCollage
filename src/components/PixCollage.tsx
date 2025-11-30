@@ -1,10 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useDebounce } from '../hooks/useDebounce';
 import { Stage, Layer } from 'react-konva';
 import { useDropzone } from 'react-dropzone';
 import { useTranslation } from 'react-i18next';
 import { PhotoIcon, LanguageIcon } from '@heroicons/react/24/outline';
-import { Capacitor } from '@capacitor/core';
 import Konva from 'konva';
 import { ImageElement as ImageComponent } from './canvas/ImageElement';
 import { TextElement as TextComponent } from './canvas/TextElement';
@@ -27,6 +26,7 @@ import { useImageHandlers } from '../hooks/useImageHandlers';
 import { useElementActions } from '../hooks/useElementActions';
 import { useTextEmoji } from '../hooks/useTextEmoji';
 import { useStickers } from '../hooks/useStickers';
+import { useExport } from '../hooks/useExport';
 
 const PixCollage = () => {
   const { t, i18n } = useTranslation();
@@ -39,7 +39,6 @@ const PixCollage = () => {
   const [isCropping, setIsCropping] = useState(false);
   const [snapRotation] = useState(true); // Snap rotation always enabled
   const [tempCropData, setTempCropData] = useState<TempCropData | null>(null);
-  const exportMode = 'content'; // Always export content only (not full canvas)
   const stageRef = useRef<Konva.Stage>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -51,8 +50,6 @@ const PixCollage = () => {
   const [editingTextElement, setEditingTextElement] = useState<TextElement | null>(null);
   const [showGridSelector, setShowGridSelector] = useState(false);
   const [showNewComposition, setShowNewComposition] = useState(true); // Show at startup
-  const [exportProgress, setExportProgress] = useState(0);
-  const [isExporting, setIsExporting] = useState(false);
   const [showLineSettings, setShowLineSettings] = useState(false);
   
   // Orientation basée sur les dimensions de la fenêtre (plus de distinction desktop/mobile)
@@ -93,17 +90,11 @@ const PixCollage = () => {
     setTempCropData,
   });
   
-  // Temporary dummy states for useTextEmoji compatibility
-  const [_editingTextId, _setEditingTextId] = useState<string | null>(null);
-  const [_editingTextValue, _setEditingTextValue] = useState('');
-  
   // Text and Emoji handlers
   const textEmoji = useTextEmoji({
     elements,
     setElements,
     setSelectedId,
-    setEditingTextId: _setEditingTextId,
-    setEditingTextValue: _setEditingTextValue,
     canvasSize,
   });
   
@@ -144,7 +135,7 @@ const PixCollage = () => {
     if (!selectedId || isCropping) setShowFilters(false);
   }, [selectedId, isCropping]);
 
-  // Synchroniser tempFilters avec l'image sélectionnée
+  // Sync tempFilters when selected image changes (intentionally only tracking id)
   useEffect(() => {
     if (selectedImage?.filters) {
       setTempFilters(selectedImage.filters);
@@ -160,6 +151,7 @@ const PixCollage = () => {
     } else {
       setTempFilters(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedImage?.id]);
 
   // Appliquer les filtres débounced (optimisation performance)
@@ -217,17 +209,38 @@ const PixCollage = () => {
 
   // Using elementActions.handleDelete and elementActions.handleClear from hook
 
-  const zoomIn = () => {
+  const zoomIn = useCallback(() => {
     setCanvasZoom(prev => Math.min(prev + 0.1, 2)); // Max 200%
-  };
+  }, []);
 
-  const zoomOut = () => {
+  const zoomOut = useCallback(() => {
     setCanvasZoom(prev => Math.max(prev - 0.1, 0.2)); // Min 20%
-  };
+  }, []);
 
-  const zoomReset = () => {
+  const zoomReset = useCallback(() => {
     setCanvasZoom(1);
-  };
+  }, []);
+
+  // Memoized toggle handlers
+  const toggleToolbar = useCallback(() => {
+    setMobileToolbarCollapsed(prev => !prev);
+  }, []);
+
+  const toggleFilters = useCallback(() => {
+    setShowFilters(prev => !prev);
+  }, []);
+
+  const closeLineSettings = useCallback(() => {
+    setShowLineSettings(false);
+  }, []);
+
+  // Memoized Stage click handler
+  const handleStageClick = useCallback((e: { target: { getStage: () => unknown } }) => {
+    const clickedOnEmpty = e.target === e.target.getStage();
+    if (clickedOnEmpty) {
+      setSelectedId(null);
+    }
+  }, []);
   
   // Two-finger pan gesture for scrolling the container
   const lastTouchCenter = useRef<{ x: number; y: number } | null>(null);
@@ -293,132 +306,22 @@ const PixCollage = () => {
     }
   }, [grid.gridMode, grid.gridZones.length, zoomToFit]);
 
-  // Using textEmoji.addText, textEmoji.addEmoji, textEmoji.handleTextDoubleClick,
-  // textEmoji.saveTextEdit, textEmoji.cancelTextEdit from hook
+  // Export hook
+  const { isExporting, exportProgress, handleExport } = useExport({
+    stageRef,
+    canvasSize,
+    gridMode: grid.gridMode,
+    selectedId,
+    setSelectedId,
+    setToast,
+    t,
+  });
 
-  const handleExport = async () => {
-    if (!stageRef.current) return;
-    
-    setIsExporting(true);
-    setExportProgress(5);
-    
-    // Désélectionner temporairement pour cacher les contrôles
-    const previousSelection = selectedId;
-    setSelectedId(null);
-    
-    await new Promise(resolve => setTimeout(resolve, 100));
-    setExportProgress(15);
-    
-    await new Promise(resolve => setTimeout(resolve, 50));
-    setExportProgress(25);
-    
-    // Attendre que les contrôles soient masqués
-    setTimeout(async () => {
-      const stage = stageRef.current!;
-      let exportOptions: { pixelRatio: number; mimeType: string; x?: number; y?: number; width?: number; height?: number } = {
-        pixelRatio: 2,
-        mimeType: 'image/png',
-      };
-
-      setExportProgress(35);
-      
-      // In grid mode, always export full canvas. In free mode with content export, crop to content.
-      if (exportMode === 'content' && grid.gridMode === 'free') {
-        const imageNodes = stage.find('Image') as Konva.Image[];
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        imageNodes.forEach((node) => {
-          if (!node.visible()) return;
-          const r = node.getClientRect({ skipStroke: true, skipShadow: true });
-          minX = Math.min(minX, r.x);
-          minY = Math.min(minY, r.y);
-          maxX = Math.max(maxX, r.x + r.width);
-          maxY = Math.max(maxY, r.y + r.height);
-        });
-        if (isFinite(minX) && isFinite(minY) && isFinite(maxX) && isFinite(maxY)) {
-          const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(v, max));
-          const x = clamp(minX, 0, stage.width());
-          const y = clamp(minY, 0, stage.height());
-          const w = clamp(maxX, 0, stage.width()) - x;
-          const h = clamp(maxY, 0, stage.height()) - y;
-          if (w > 0 && h > 0) {
-            exportOptions = { ...exportOptions, x, y, width: w, height: h };
-          }
-        }
-      } else if (grid.gridMode === 'grid') {
-        // Grid mode: export full canvas with exact dimensions
-        exportOptions = {
-          ...exportOptions,
-          x: 0,
-          y: 0,
-          width: canvasSize.width,
-          height: canvasSize.height
-        };
-      }
-
-      setExportProgress(45);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      setExportProgress(55);
-      
-      const uri = stage.toDataURL(exportOptions);
-      
-      setExportProgress(75);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      setExportProgress(85);
-
-      if (Capacitor.isNativePlatform()) {
-        (async () => {
-          try {
-            setExportProgress(90);
-            const { Share } = await import('@capacitor/share');
-            await Share.share({ title: 'Export PNG', url: uri });
-            setToast(t('toast.exportReady'));
-          } catch (e) {
-            try {
-              const base64 = uri.split(',')[1] || '';
-              const { Filesystem, Directory } = await import('@capacitor/filesystem');
-              const name = `collage-${Date.now()}.png`;
-              await Filesystem.writeFile({
-                path: name,
-                data: base64,
-                directory: Directory.Documents,
-                recursive: true,
-              });
-              setToast(t('toast.exportSaved', { filename: name }));
-            } catch {
-              setToast(t('toast.exportUnavailable'));
-            }
-          } finally {
-            setExportProgress(100);
-            setTimeout(() => {
-              setIsExporting(false);
-              setExportProgress(0);
-            }, 500);
-          }
-        })();
-      } else {
-        setExportProgress(90);
-        const link = document.createElement('a');
-        link.download = `collage-${Date.now()}.png`;
-        link.href = uri;
-        link.click();
-        setToast(t('toast.exportDownloaded'));
-        setExportProgress(100);
-        setTimeout(() => {
-          setIsExporting(false);
-          setExportProgress(0);
-        }, 500);
-      }
-      
-      // Restaurer la sélection
-      setSelectedId(previousSelection);
-    }, 200);
-  };
-
-  const handleTransform = (id: string, newAttrs: Partial<CanvasElement>) => {
-    setElements(elements.map(el => 
+  const handleTransform = useCallback((id: string, newAttrs: Partial<CanvasElement>) => {
+    setElements(prevElements => prevElements.map(el => 
       el.id === id ? { ...el, ...newAttrs } as CanvasElement : el
     ));
-  };
+  }, [setElements]);
 
   // Using elementActions.bringToFront, elementActions.sendToBack,
   // elementActions.bringForward, elementActions.sendBackward from hook
@@ -537,11 +440,31 @@ const PixCollage = () => {
     input.click();
   }, [grid, canvasSize, elements, setElements, setSelectedId]);
 
-  const sortedElements = [...elements].sort((a, b) => a.zIndex - b.zIndex);
-  const sortedImages = sortedElements.filter((el): el is ImageElement => el.type === 'image');
-  const sortedTexts = sortedElements.filter((el): el is TextElement => el.type === 'text');
-  const sortedEmojis = sortedElements.filter((el): el is EmojiElement => el.type === 'emoji');
-  const sortedStickers = sortedElements.filter((el): el is StickerElement => el.type === 'sticker');
+  // Memoize sorted elements to avoid recalculation on every render
+  const sortedElements = useMemo(() => 
+    [...elements].sort((a, b) => a.zIndex - b.zIndex), 
+    [elements]
+  );
+  
+  const sortedImages = useMemo(() => 
+    sortedElements.filter((el): el is ImageElement => el.type === 'image'),
+    [sortedElements]
+  );
+  
+  const sortedTexts = useMemo(() => 
+    sortedElements.filter((el): el is TextElement => el.type === 'text'),
+    [sortedElements]
+  );
+  
+  const sortedEmojis = useMemo(() => 
+    sortedElements.filter((el): el is EmojiElement => el.type === 'emoji'),
+    [sortedElements]
+  );
+  
+  const sortedStickers = useMemo(() => 
+    sortedElements.filter((el): el is StickerElement => el.type === 'sticker'),
+    [sortedElements]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pb-24 md:pb-0">
@@ -606,12 +529,7 @@ const PixCollage = () => {
                       width={canvasSize.width}
                       height={canvasSize.height}
                       ref={stageRef}
-                      onClick={(e) => {
-                        const clickedOnEmpty = e.target === e.target.getStage();
-                        if (clickedOnEmpty) {
-                          setSelectedId(null);
-                        }
-                      }}
+                      onClick={handleStageClick}
                     >
                       {grid.gridMode === 'grid' ? (
                         <>
@@ -625,7 +543,6 @@ const PixCollage = () => {
                             onSelectElement={setSelectedId}
                             onTransform={handleTransform}
                             onAddToZone={handleAddToZone}
-                            snapRotation={snapRotation}
                             lineColor={grid.gridLineColor}
                             lineWidth={grid.gridLineWidth}
                             lineStyle={grid.gridLineStyle}
@@ -685,7 +602,7 @@ const PixCollage = () => {
                               isSelected={txt.id === selectedId}
                               onSelect={() => setSelectedId(txt.id)}
                               onTransform={handleTransform}
-                              onDoubleClick={textEmoji.handleTextDoubleClick}
+                              onDoubleClick={handleTextDoubleClick}
                             />
                           ))}
                           {sortedEmojis.map((emoji) => (
@@ -741,7 +658,7 @@ const PixCollage = () => {
       {/* Toolbar - Always visible (adapts to portrait/landscape) */}
       <MobileToolbar
         isCollapsed={mobileToolbarCollapsed}
-        onToggleCollapse={() => setMobileToolbarCollapsed(!mobileToolbarCollapsed)}
+        onToggleCollapse={toggleToolbar}
         isLandscape={isLandscape}
         isCropping={isCropping}
         selectedId={selectedId}
@@ -751,7 +668,7 @@ const PixCollage = () => {
         onAddImages={() => (open ? open() : fileInputRef.current?.click())}
         onEditText={() => selectedElement?.type === 'text' && handleTextDoubleClick(selectedElement.id)}
         onCrop={elementActions.startCrop}
-        onToggleFilters={() => setShowFilters(s => !s)}
+        onToggleFilters={toggleFilters}
         onAddText={addTextWithEditor}
         onAddEmoji={() => setShowEmojiPicker(true)}
         onShowStickerPicker={() => setShowStickerPicker(true)}
@@ -840,7 +757,7 @@ const PixCollage = () => {
 
       {/* Grid Line Settings Modal */}
       {showLineSettings && grid.gridMode === 'grid' && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowLineSettings(false)}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeLineSettings}>
           <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <GridLineSettings
               lineColor={grid.gridLineColor}
@@ -849,7 +766,7 @@ const PixCollage = () => {
               onColorChange={grid.setGridLineColor}
               onWidthChange={grid.setGridLineWidth}
               onStyleChange={grid.setGridLineStyle}
-              onClose={() => setShowLineSettings(false)}
+              onClose={closeLineSettings}
             />
           </div>
         </div>

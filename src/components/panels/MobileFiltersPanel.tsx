@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface FilterValues {
@@ -18,7 +19,7 @@ interface MobileFiltersPanelProps {
   onClose: () => void;
 }
 
-export const MobileFiltersPanel: React.FC<MobileFiltersPanelProps> = ({
+const MobileFiltersPanelInner: React.FC<MobileFiltersPanelProps> = ({
   show,
   isLandscape,
   filters,
@@ -160,3 +161,5 @@ export const MobileFiltersPanel: React.FC<MobileFiltersPanelProps> = ({
     </div>
   );
 };
+
+export const MobileFiltersPanel = memo(MobileFiltersPanelInner);

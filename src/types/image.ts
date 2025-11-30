@@ -43,6 +43,6 @@ export interface ImageComponentProps {
   tempCropData: TempCropData | null;
   snapRotation: boolean;
   onSelect: () => void;
-  onTransform: (id: string, newAttrs: any) => void;
+  onTransform: (id: string, newAttrs: Partial<Omit<ImageElement, 'id' | 'image'>>) => void;
   onCropChange: (data: TempCropData) => void;
 }

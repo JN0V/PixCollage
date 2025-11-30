@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { Group, Rect, Line } from 'react-konva';
 import type { GridZone } from '../../types/grid';
 
@@ -26,7 +26,7 @@ const getLineDashPattern = (style: string): number[] | undefined => {
   }
 };
 
-export const GridZoneContainer: React.FC<GridZoneContainerProps> = ({
+const GridZoneContainerInner: React.FC<GridZoneContainerProps> = ({
   zone,
   canvasWidth,
   canvasHeight,
@@ -37,66 +37,73 @@ export const GridZoneContainer: React.FC<GridZoneContainerProps> = ({
   lineStyle = 'dashed',
   children,
 }) => {
-  const absX = zone.x * canvasWidth;
-  const absY = zone.y * canvasHeight;
-  const absWidth = zone.width * canvasWidth;
-  const absHeight = zone.height * canvasHeight;
+  // Memoize all calculations
+  const { absX, absY, absWidth, absHeight, centerX, centerY, clipPoints } = useMemo(() => {
+    const aX = zone.x * canvasWidth;
+    const aY = zone.y * canvasHeight;
+    const aW = zone.width * canvasWidth;
+    const aH = zone.height * canvasHeight;
 
-  // Calculate centroid for button placement
-  let centerX = absWidth / 2;
-  let centerY = absHeight / 2;
-  
-  if (zone.clipPath && zone.clipPath.length > 0) {
-    // For polygon zones, calculate true centroid
-    const points = zone.clipPath.map(p => ({
-      x: p.x * absWidth,
-      y: p.y * absHeight
-    }));
+    let cX = aW / 2;
+    let cY = aH / 2;
+    let points: number[] | null = null;
     
-    let sumX = 0;
-    let sumY = 0;
-    points.forEach(p => {
-      sumX += p.x;
-      sumY += p.y;
-    });
-    centerX = sumX / points.length;
-    centerY = sumY / points.length;
-  }
+    if (zone.clipPath && zone.clipPath.length > 0) {
+      // Pre-calculate clip points
+      points = zone.clipPath.flatMap(p => [p.x * aW, p.y * aH]);
+      
+      // Calculate centroid
+      let sumX = 0, sumY = 0;
+      for (let i = 0; i < points.length; i += 2) {
+        sumX += points[i];
+        sumY += points[i + 1];
+      }
+      cX = sumX / (points.length / 2);
+      cY = sumY / (points.length / 2);
+    }
+
+    return { absX: aX, absY: aY, absWidth: aW, absHeight: aH, centerX: cX, centerY: cY, clipPoints: points };
+  }, [zone.x, zone.y, zone.width, zone.height, zone.clipPath, canvasWidth, canvasHeight]);
+
+  // Memoize clipFunc to avoid recreation on every render
+  const clipFunc = useCallback((ctx: { beginPath: () => void; moveTo: (x: number, y: number) => void; lineTo: (x: number, y: number) => void; closePath: () => void; rect: (x: number, y: number, w: number, h: number) => void }) => {
+    if (clipPoints) {
+      ctx.beginPath();
+      ctx.moveTo(clipPoints[0], clipPoints[1]);
+      for (let i = 2; i < clipPoints.length; i += 2) {
+        ctx.lineTo(clipPoints[i], clipPoints[i + 1]);
+      }
+      ctx.closePath();
+    } else {
+      ctx.rect(0, 0, absWidth, absHeight);
+    }
+  }, [clipPoints, absWidth, absHeight]);
+
+  // Memoize click handlers
+  const handleClick = useCallback(() => {
+    if (!hasElement) onAddClick(zone.id);
+  }, [hasElement, onAddClick, zone.id]);
+
+  const handleAddButtonClick = useCallback((e: { cancelBubble: boolean }) => {
+    e.cancelBubble = true;
+    onAddClick(zone.id);
+  }, [onAddClick, zone.id]);
 
   return (
     <Group
       x={absX}
       y={absY}
-      onClick={() => !hasElement && onAddClick(zone.id)}
-      onTap={() => !hasElement && onAddClick(zone.id)}
-      clipFunc={(ctx) => {
-        // Clip content to zone boundaries (polygon or rectangle)
-        if (zone.clipPath && zone.clipPath.length > 0) {
-          // Polygon clipping (diagonal, zigzag, etc.)
-          ctx.beginPath();
-          const firstPoint = zone.clipPath[0];
-          ctx.moveTo(firstPoint.x * absWidth, firstPoint.y * absHeight);
-          for (let i = 1; i < zone.clipPath.length; i++) {
-            const point = zone.clipPath[i];
-            ctx.lineTo(point.x * absWidth, point.y * absHeight);
-          }
-          ctx.closePath();
-        } else {
-          // Rectangle clipping (default)
-          ctx.rect(0, 0, absWidth, absHeight);
-        }
-      }}
+      onClick={handleClick}
+      onTap={handleClick}
+      clipFunc={clipFunc}
     >
       {/* Zone background - only visible when empty */}
       {!hasElement && (
         <>
-          {zone.clipPath && zone.clipPath.length > 0 ? (
+          {clipPoints ? (
             // Polygon border for diagonal/zigzag zones
             <Line
-              points={zone.clipPath.flatMap(p => [p.x * absWidth, p.y * absHeight]).concat([
-                zone.clipPath[0].x * absWidth, 
-                zone.clipPath[0].y * absHeight
-              ])}
+              points={clipPoints.concat([clipPoints[0], clipPoints[1]])}
               fill={`${lineColor}14`}
               stroke={lineColor}
               strokeWidth={lineWidth}
@@ -130,14 +137,8 @@ export const GridZoneContainer: React.FC<GridZoneContainerProps> = ({
             fill="#6366f1"
             cornerRadius={30}
             opacity={0.9}
-            onClick={(e) => {
-              e.cancelBubble = true;
-              onAddClick(zone.id);
-            }}
-            onTap={(e) => {
-              e.cancelBubble = true;
-              onAddClick(zone.id);
-            }}
+            onClick={handleAddButtonClick}
+            onTap={handleAddButtonClick}
             _useStrictMode
           />
           {/* Plus icon */}
@@ -165,3 +166,6 @@ export const GridZoneContainer: React.FC<GridZoneContainerProps> = ({
     </Group>
   );
 };
+
+// Memoize the entire component to prevent unnecessary re-renders
+export const GridZoneContainer = memo(GridZoneContainerInner);

@@ -6,8 +6,6 @@ interface UseTextEmojiProps {
   elements: CanvasElement[];
   setElements: React.Dispatch<React.SetStateAction<CanvasElement[]>>;
   setSelectedId: React.Dispatch<React.SetStateAction<string | null>>;
-  setEditingTextId: React.Dispatch<React.SetStateAction<string | null>>;
-  setEditingTextValue: React.Dispatch<React.SetStateAction<string>>;
   canvasSize: { width: number; height: number };
 }
 
@@ -15,8 +13,6 @@ export const useTextEmoji = ({
   elements,
   setElements,
   setSelectedId,
-  setEditingTextId,
-  setEditingTextValue,
   canvasSize,
 }: UseTextEmojiProps) => {
   const { t } = useTranslation();
@@ -32,7 +28,7 @@ export const useTextEmoji = ({
       y: canvasSize.height / 2 - 40,
       fontSize: 64,
       fontFamily: 'Arial',
-      fill: '#6b7280', // Gray-500 - visible on both light and dark
+      fill: '#6b7280',
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
@@ -51,7 +47,7 @@ export const useTextEmoji = ({
       emoji,
       x: canvasSize.width / 2 - 60,
       y: canvasSize.height / 2 - 60,
-      fontSize: 96, // Increased from 48 to 96 for better visibility in zoomed grid
+      fontSize: 96,
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
@@ -61,36 +57,8 @@ export const useTextEmoji = ({
     setSelectedId(newEmoji.id);
   }, [elements, canvasSize, setElements, setSelectedId]);
 
-  // Handle text double-click to edit
-  const handleTextDoubleClick = useCallback((id: string, currentText: string) => {
-    setEditingTextId(id);
-    setEditingTextValue(currentText);
-  }, [setEditingTextId, setEditingTextValue]);
-
-  // Save edited text
-  const saveTextEdit = useCallback((textId: string, newText: string) => {
-    setElements(prev =>
-      prev.map(el =>
-        el.id === textId && el.type === 'text'
-          ? { ...el, text: newText } as CanvasElement
-          : el
-      )
-    );
-    setEditingTextId(null);
-    setEditingTextValue('');
-  }, [setElements, setEditingTextId, setEditingTextValue]);
-
-  // Cancel text editing
-  const cancelTextEdit = useCallback(() => {
-    setEditingTextId(null);
-    setEditingTextValue('');
-  }, [setEditingTextId, setEditingTextValue]);
-
   return {
     addText,
     addEmoji,
-    handleTextDoubleClick,
-    saveTextEdit,
-    cancelTextEdit,
   };
 };

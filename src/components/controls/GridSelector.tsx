@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { gridTemplates } from '../../types/grid';
 
 interface GridSelectorProps {
@@ -8,18 +8,18 @@ interface GridSelectorProps {
   onClose: () => void;
 }
 
-export const GridSelector: React.FC<GridSelectorProps> = ({
+const GridSelectorInner: React.FC<GridSelectorProps> = ({
   selectedGridId,
   onSelectGrid,
   show,
   onClose,
 }) => {
-  if (!show) return null;
-
-  const handleSelect = (gridId: string) => {
+  const handleSelect = useCallback((gridId: string) => {
     onSelectGrid(gridId);
     onClose();
-  };
+  }, [onSelectGrid, onClose]);
+
+  if (!show) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={onClose}>
@@ -76,6 +76,8 @@ export const GridSelector: React.FC<GridSelectorProps> = ({
     </div>
   );
 };
+
+export const GridSelector = memo(GridSelectorInner);
 
 interface GridPreviewProps {
   zones: Array<{ x: number; y: number; width: number; height: number }>;

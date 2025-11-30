@@ -9,7 +9,7 @@ class Logger {
   private prefix = '[PixCollage]';
   private enabled = true;
 
-  private log(level: LogLevel, category: string, message: string, ...args: any[]) {
+  private log(level: LogLevel, category: string, message: string, ...args: unknown[]) {
     if (!this.enabled) return;
 
     const fullMessage = `${this.prefix} [${category}] ${message}`;
@@ -31,42 +31,42 @@ class Logger {
   }
 
   // Gesture logs
-  gesture(message: string, ...args: any[]) {
+  gesture(message: string, ...args: unknown[]) {
     this.log('debug', 'GESTURE', message, ...args);
   }
 
   // Drag logs
-  drag(message: string, ...args: any[]) {
+  drag(message: string, ...args: unknown[]) {
     this.log('debug', 'DRAG', message, ...args);
   }
 
   // Image element logs
-  image(message: string, ...args: any[]) {
+  image(message: string, ...args: unknown[]) {
     this.log('debug', 'IMAGE', message, ...args);
   }
 
   // Canvas logs
-  canvas(message: string, ...args: any[]) {
+  canvas(message: string, ...args: unknown[]) {
     this.log('debug', 'CANVAS', message, ...args);
   }
 
   // Filter logs
-  filter(message: string, ...args: any[]) {
+  filter(message: string, ...args: unknown[]) {
     this.log('debug', 'FILTER', message, ...args);
   }
 
   // Export logs
-  export(message: string, ...args: any[]) {
+  export(message: string, ...args: unknown[]) {
     this.log('info', 'EXPORT', message, ...args);
   }
 
   // Error logs
-  error(message: string, ...args: any[]) {
+  error(message: string, ...args: unknown[]) {
     this.log('error', 'ERROR', message, ...args);
   }
 
   // Info logs
-  info(message: string, ...args: any[]) {
+  info(message: string, ...args: unknown[]) {
     this.log('info', 'INFO', message, ...args);
   }
 

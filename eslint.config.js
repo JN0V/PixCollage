@@ -8,8 +8,9 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores([
     'dist',
+    'android',
     // unit tests lint-noise
-    'src/utils/__tests__/**',
+    'src/**/__tests__/**',
   ]),
   {
     files: ['**/*.{ts,tsx}'],

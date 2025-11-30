@@ -133,5 +133,12 @@
   "languages": {
     "en": "English",
     "fr": "Français"
+  },
+  "common": {
+    "back": "Retour",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "close": "Fermer"
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gridTemplates } from '../../types/grid';
 
@@ -10,7 +10,7 @@ interface NewCompositionModalProps {
   onClose: () => void;
 }
 
-export const NewCompositionModal: React.FC<NewCompositionModalProps> = ({
+const NewCompositionModalInner: React.FC<NewCompositionModalProps> = ({
   show,
   onSelectFree,
   onSelectGrid,
@@ -18,6 +18,13 @@ export const NewCompositionModal: React.FC<NewCompositionModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [step, setStep] = useState<'choice' | 'grid'>('choice');
+
+  // Reset step when modal is shown
+  useEffect(() => {
+    if (show) {
+      setStep('choice');
+    }
+  }, [show]);
 
   if (!show) return null;
 
@@ -177,3 +184,5 @@ export const NewCompositionModal: React.FC<NewCompositionModalProps> = ({
     </div>
   );
 };
+
+export const NewCompositionModal = memo(NewCompositionModalInner);

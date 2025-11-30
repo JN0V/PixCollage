@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TextElement } from '../../types/canvas';
 
@@ -27,7 +27,7 @@ const COLORS = [
   '#FFC0CB', '#A52A2A', '#808080', '#FFD700', '#4B0082',
 ];
 
-export const TextEditorModal: React.FC<TextEditorModalProps> = ({
+const TextEditorModalInner: React.FC<TextEditorModalProps> = ({
   show,
   textElement,
   onSave,
@@ -242,3 +242,5 @@ export const TextEditorModal: React.FC<TextEditorModalProps> = ({
     </div>
   );
 };
+
+export const TextEditorModal = memo(TextEditorModalInner);

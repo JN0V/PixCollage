@@ -1,31 +1,31 @@
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { useMultiTouchGestures } from '../useMultiTouchGestures';
-import { createRef } from 'react';
 import Konva from 'konva';
 
 describe('useMultiTouchGestures', () => {
-  let mockNode: any;
-  let mockLayer: any;
+  let mockNode: Record<string, Mock>;
+  let mockLayer: Record<string, Mock>;
   let nodeRef: React.RefObject<Konva.Image>;
-  let onTransformEnd: jest.Mock;
+  let onTransformEnd: Mock;
 
   beforeEach(() => {
     // Mock Konva node
     mockLayer = {
-      batchDraw: jest.fn(),
+      batchDraw: vi.fn(),
     };
 
     mockNode = {
-      x: jest.fn().mockReturnValue(100),
-      y: jest.fn().mockReturnValue(100),
-      scaleX: jest.fn().mockReturnValue(1),
-      scaleY: jest.fn().mockReturnValue(1),
-      rotation: jest.fn().mockReturnValue(0),
-      getLayer: jest.fn().mockReturnValue(mockLayer),
+      x: vi.fn().mockReturnValue(100),
+      y: vi.fn().mockReturnValue(100),
+      scaleX: vi.fn().mockReturnValue(1),
+      scaleY: vi.fn().mockReturnValue(1),
+      rotation: vi.fn().mockReturnValue(0),
+      getLayer: vi.fn().mockReturnValue(mockLayer),
     };
 
-    nodeRef = { current: mockNode } as any;
-    onTransformEnd = jest.fn();
+    nodeRef = { current: mockNode as unknown as Konva.Image } as React.RefObject<Konva.Image>;
+    onTransformEnd = vi.fn();
   });
 
   describe('Multi-touch state management', () => {
@@ -48,7 +48,7 @@ describe('useMultiTouchGestures', () => {
             { clientX: 100, clientY: 100 },
             { clientX: 200, clientY: 200 },
           ],
-          preventDefault: jest.fn(),
+          preventDefault: vi.fn(),
         },
         cancelBubble: false,
       } as any;
@@ -77,7 +77,7 @@ describe('useMultiTouchGestures', () => {
             { clientX: 100, clientY: 100 },
             { clientX: 200, clientY: 200 },
           ],
-          preventDefault: jest.fn(),
+          preventDefault: vi.fn(),
         },
         cancelBubble: false,
       } as any;
@@ -121,7 +121,7 @@ describe('useMultiTouchGestures', () => {
             { clientX: 100, clientY: 100 },
             { clientX: 200, clientY: 200 },
           ],
-          preventDefault: jest.fn(),
+          preventDefault: vi.fn(),
         },
         cancelBubble: false,
       } as any;
@@ -148,7 +148,7 @@ describe('useMultiTouchGestures', () => {
       const touchStart1Finger = {
         evt: {
           touches: [{ clientX: 150, clientY: 150 }],
-          preventDefault: jest.fn(),
+          preventDefault: vi.fn(),
         },
         cancelBubble: false,
       } as any;
@@ -171,7 +171,7 @@ describe('useMultiTouchGestures', () => {
         })
       );
 
-      mockNode.rotation.mockReturnValue(47); // Close to 45
+      mockNode.rotation.mockReturnValue(85); // Close to 90 (within 15°)
 
       // Start and end multi-touch
       const touchStart = {
@@ -180,10 +180,10 @@ describe('useMultiTouchGestures', () => {
             { clientX: 100, clientY: 100 },
             { clientX: 200, clientY: 200 },
           ],
-          preventDefault: jest.fn(),
+          preventDefault: vi.fn(),
         },
         cancelBubble: false,
-      } as any;
+      } as unknown as Konva.KonvaEventObject<TouchEvent>;
 
       act(() => {
         result.current.handlers.onTouchStart(touchStart);
@@ -193,14 +193,14 @@ describe('useMultiTouchGestures', () => {
         evt: {
           touches: [],
         },
-      } as any;
+      } as unknown as Konva.KonvaEventObject<TouchEvent>;
 
       act(() => {
         result.current.handlers.onTouchEnd(touchEnd);
       });
 
-      // Should have snapped rotation to 45
-      expect(mockNode.rotation).toHaveBeenCalledWith(45);
+      // Should have snapped rotation to 90 (snap angles are 0, 90, 180, 270, 360)
+      expect(mockNode.rotation).toHaveBeenCalledWith(90);
     });
   });
 
@@ -221,7 +221,7 @@ describe('useMultiTouchGestures', () => {
             { clientX: 100, clientY: 100 },
             { clientX: 200, clientY: 200 },
           ],
-          preventDefault: jest.fn(),
+          preventDefault: vi.fn(),
         },
         cancelBubble: false,
       } as any;
@@ -251,7 +251,7 @@ describe('useMultiTouchGestures', () => {
             { clientX: 100, clientY: 100 },
             { clientX: 200, clientY: 200 },
           ],
-          preventDefault: jest.fn(),
+          preventDefault: vi.fn(),
         },
         cancelBubble: false,
       } as any;

@@ -14,7 +14,7 @@ interface CanvasSizeSelectorProps {
   onSizeChange: (size: CanvasSize) => void;
 }
 
-export const CANVAS_PRESETS: CanvasPreset[] = [
+const CANVAS_PRESETS: CanvasPreset[] = [
   { name: 'Instagram Post', width: 1080, height: 1080 },
   { name: 'Instagram Story', width: 1080, height: 1920 },
   { name: 'Facebook Post', width: 1200, height: 630 },
